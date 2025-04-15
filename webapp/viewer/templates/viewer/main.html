@@ -21,7 +21,7 @@
     <div class="container">
 
         <div class="header_elements">
-            <a href='/viewer/static' style="text-decoration: none;  color: #FFFFFF;"><div class="Logo">highl<span class="span" >Ai</span>ghts</div></a>
+            <a href='/viewer/static' style="text-decoration: none;  color: #FFFFFF;"><div class="Logo">Stream Clipper<span class="span" ></div></a>
             <div class="header_user">{{ name }}<img class = "user" src="{% static 'images/user.png' %}" alt="">
             </div>
         </div>
@@ -44,11 +44,11 @@
             {% for stream in stream_data %}
                 {% if forloop.counter|modulo:3 == 1 %}
                     <div class="line">
-                        <div class="video"><a href="{% url 'stream' stream_id=stream.id %}"><img class = "play" src="{% static 'images/play.png' %}" alt=""><span class="text_video">{{stream.stream_name}}</span></a></div>
+                        <div class="video"><a href="{% url 'video_player' stream_id=stream.id %}"><img class = "play" src="{% static 'images/play.png' %}" alt=""><span class="text_video">{{stream.stream_name}}</span></a></div>
                 {% elif forloop.counter|modulo:3 == 0 %}
-                        <div class="video"><a href="{% url 'stream' stream_id=stream.id %}"><img class = "play" src="{% static 'images/play.png' %}" alt=""><span class="text_video">{{stream.stream_name}}</span></a></div>
+                        <div class="video"><a href="{% url 'video_player' stream_id=stream.id %}"><img class = "play" src="{% static 'images/play.png' %}" alt=""><span class="text_video">{{stream.stream_name}}</span></a></div>
                     </div> {% else %}
-                        <div class="video"><a href="{% url 'stream' stream_id=stream.id %}"><img class = "play" src="{% static 'images/play.png' %}" alt=""><span class="text_video">{{stream.stream_name}}</span></a></div>
+                        <div class="video"><a href="{% url 'video_player' stream_id=stream.id %}"><img class = "play" src="{% static 'images/play.png' %}" alt=""><span class="text_video">{{stream.stream_name}}</span></a></div>
                 {% endif %}
 
                 {% if forloop.last and forloop.counter|modulo:3 != 0 %}
@@ -58,12 +58,6 @@
             {% endfor %}
 
         </div> </div> </main>
-
-    <footer class="footer">
-    <div class="container">
-        <div class="copyright">Copyright ©</div>
-    </div>
-    </footer>
         </div> </body>
 
 </html>
