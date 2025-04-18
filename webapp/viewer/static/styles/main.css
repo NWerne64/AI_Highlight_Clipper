@@ -1,3 +1,5 @@
+/* webapp/static/styles/main.css */
+
 * {
     margin: 0;
     padding: 0;
@@ -9,99 +11,99 @@ html {
 }
 
 body {
-    /* Gleicher blauer Farbverlauf wie Login */
+    /* Blauer Farbverlauf */
     background: linear-gradient(50deg, #001f3f 20%, #0a2d50 49%, #007bff 71%);
-    font-family: 'Montserrat', sans-serif; /* Überprüfe, ob Montserrat geladen wird, sonst fallback */
+    font-family: 'Montserrat', sans-serif; /* Fallback hinzufügen: font-family: 'Montserrat', sans-serif, Arial, Helvetica; */
     font-weight: 400;
     font-size: 16px;
     line-height: 1.7;
-    /* height: 100%; /* Höhe hier nicht unbedingt nötig */
-    color: #f0f0f0; /* Helle Grundtextfarbe für besseren Kontrast */
+    color: #f0f0f0; /* Helle Grundtextfarbe */
 }
 
 .page {
-    /* height: 110vh; /* Oft besser min-height verwenden */
     min-height: 100vh;
-    background: inherit; /* Erbt den Body-Gradient */
+    background: inherit;
     position: relative;
-    padding-bottom: 70px; /* Platz für Footer schaffen */
+    padding-bottom: 70px; /* Platz für Footer */
 }
 
 .header {
-    background-color: rgba(5, 5, 5, .6); /* Etwas dunkler/transparenter */
-    padding: 15px 0; /* Mehr vertikales Padding */
-    margin-bottom: 40px; /* Weniger Abstand unten */
-    box-shadow: 0 2px 5px rgba(0,0,0,0.2); /* Leichter Schatten */
+    background-color: rgba(5, 5, 5, .6);
+    padding: 15px 0;
+    margin-bottom: 40px;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.2);
 }
 
 .container {
-    max-width: 1100px; /* Etwas breiter */
+    max-width: 1100px;
     margin: 0 auto;
-    padding: 0 15px; /* Kleiner Rand links/rechts */
+    padding: 0 15px;
     position: relative;
 }
 
 .header_elements {
    display: flex;
     justify-content: space-between;
-    align-items: center; /* Vertikal zentrieren */
+    align-items: center;
     color: white;
 }
 
 .Logo {
     font-weight: 400;
-    font-size: 24px; /* Größer */
+    font-size: 24px;
+    color: #FFFFFF;
+    text-decoration: none;
 }
+
+.header_elements a:first-child { /* Styling für den Link um das Logo */
+     text-decoration: none;
+     color: inherit;
+}
+
 
 .Logo .span { /* Span innerhalb des Logos stylen */
     color: #4dabf7; /* Helles Blau */
     font-weight: 700;
-    font-size: 28px; /* Größer */
+    font-size: 28px;
 }
 
-
+/* Redundante .header_user Regel, kann bleiben oder weg, wenn nicht mehr genutzt */
 .header_user {
     position: relative;
-    /* margin-right: 35px; */ /* Entfernt, nutzen Flexbox-Abstand */
     font-size: 15px;
-    display: flex; /* Icon neben Text */
+    display: flex;
     align-items: center;
 }
 
-.user {
-    /* display: inline-block; */
-    /* position: absolute; */ /* Positionierung vereinfacht */
+.user { /* Das Icon neben dem Usernamen */
     height: 20px;
-    width: auto; /* Breite automatisch */
-    /* top: 3px; */
-    /* left: 70px; */
-    margin-left: 8px; /* Abstand zum Text */
+    width: auto;
+    margin-left: 8px;
+    vertical-align: middle;
 }
 
 .control_panel {
     display: inline-block;
-    /* margin: 0 415px; */ /* Absolute Positionierung vermeiden */
-    /* margin-bottom: 40px; */
-    /* margin-top: -60px; */
-    background-color: rgba(0, 0, 0, .2); /* Weniger deckend */
+    background-color: rgba(0, 0, 0, .2);
     font-size: 12px;
-    /* Blauer Akzent */
     color: #4dabf7;
     text-decoration: none;
     border: 1px solid #4dabf7;
-    padding: 5px 15px; /* Weniger horizontales Padding */
+    padding: 5px 15px;
     border-radius: 4px;
     transition: all 0.2s;
+    margin-left: 20px;
 }
 
 .control_panel:hover{
-    background-color: #e7f5ff; /* Sehr helles Blau */
-    border: 1px solid #007bff; /* Mittelblau */
-    color: #0056b3; /* Dunkleres Blau */
+    background-color: #e7f5ff;
+    border: 1px solid #007bff;
+    color: #0056b3;
 }
 
-/* Upload Form Styling (falls main.css geladen wird, wenn Form sichtbar) */
-main form { /* Gezielter Selektor */
+/* Upload Form Styling */
+/* Gezielterer Selektor mit ID wäre besser, falls es andere Forms gibt */
+main form {
     background-color: rgba(255, 255, 255, 0.1);
     padding: 20px;
     border-radius: 8px;
@@ -124,7 +126,7 @@ main form input[type="file"] {
     color: white;
     border-radius: 4px;
 }
-/* Spezielles Styling für File Input Button (Browser-abhängig) */
+
 main form input[type="file"]::file-selector-button {
     background-color: #007bff;
     color: white;
@@ -143,31 +145,341 @@ main form button[type="submit"] {
     font-weight: 500;
     border: none;
     border-radius: 5px;
-    background-color: #007bff; /* Mittelblau */
+    background-color: #007bff;
     color: white;
     cursor: pointer;
     transition: background-color 0.2s;
 }
 main form button[type="submit"]:hover {
-     background-color: #0056b3; /* Dunkleres Blau */
+     background-color: #0056b3;
 }
 
 
-/* Alte Search Box entfernt, Styling nicht mehr nötig */
-/* .search-box { ... } */
-/* .search-txt { ... } */
-/* .img-search { ... } */
-/* .search-btn { ... } */
-
-
+/* Video Übersicht */
 .video_lines {
-    display: block; /* Bleibt Block */
+    display: block;
     width: auto;
-    margin-top: 30px; /* Abstand nach oben */
+    margin-top: 30px;
 }
 
 .line {
-   /* display: inline-flex; */ /* Besser Flexbox oder Grid für Container */
-   display: flex; /* Flexbox verwenden */
-   flex-wrap: wrap; /* Umbruch erlauben */
-   justify-content:
+   display: flex;
+   flex-wrap: wrap;
+   /* Syntaxfehler behoben - verwendet space-between für gleichmäßige Verteilung */
+   justify-content: space-between;
+   gap: 20px;
+   margin-bottom: 20px;
+}
+
+.video {
+    display: block;
+    flex: 1 1 280px; /* Lässt Videos wachsen/schrumpfen, Basis 280px */
+    max-width: 300px; /* Max. Breite pro Video */
+    min-height: 150px;
+    background-color: rgba(0, 0, 0, .5);
+    text-align: center;
+    margin-bottom: 10px; /* Nur Abstand nach unten */
+    border-radius: 8px;
+    overflow: hidden;
+    position: relative;
+    color: white;
+    text-decoration: none;
+}
+.video a { /* Stellt sicher, dass der Link das Video-Div ausfüllt */
+     color: inherit;
+     text-decoration: none;
+     display: block;
+     height: 100%;
+}
+
+.play { /* Das Play-Icon */
+    display: block;
+    width: 60px;
+    height: 60px;
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -60%); /* Zentriert und leicht nach oben */
+    opacity: 0.7;
+    transition: all .3s;
+}
+
+.video:hover .play {
+    transform: translate(-50%, -60%) scale(1.2);
+    opacity: 1;
+}
+
+.text_video { /* Der Text unter dem Play-Icon */
+    position: absolute;
+    bottom: 0px;
+    left: 0;
+    right: 0;
+    color: #FFF;
+    font-size: 13px;
+    background-color: rgba(0, 0, 0, 0.6);
+    padding: 5px;
+    text-align: center;
+    /* Verhindert Umbruch und zeigt ... bei Überlauf */
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.video:hover .text_video {
+    text-decoration: underline;
+}
+
+/* Footer */
+.footer {
+    position: absolute;
+    left: 0;
+    bottom: 0;
+    width: 100%;
+    height: 50px;
+    background-color: rgba(5, 5, 5, .7);
+    text-align: center;
+}
+
+.copyright {
+    color: #a0a0a0;
+    font-size: 14px;
+    padding-top: 15px;
+}
+
+/* Stile für stream.html (Top Elements) */
+.main { /* Gilt auch für stream.html, da die Klasse verwendet wird */
+    margin-bottom: 20px;
+}
+
+.top_elements{ /* Container für Titel, Stop, Delete auf stream.html */
+    display: flex;
+    max-width: 550px; /* Breite anpassen, falls nötig */
+    margin: 0 auto 30px auto; /* Zentrieren */
+    align-items: center;
+    justify-content: space-between;
+    gap: 15px;
+}
+
+.heading { /* Stream-Titel */
+    display: block;
+    color: #FFF;
+    font-weight: 700;
+    font-size: 20px;
+    margin-right: auto; /* Schiebt andere Buttons nach rechts */
+}
+.download { /* Delete-Button Container */
+    display: block;
+    height: 40px;
+    background-color: rgba(0, 0, 0, .4);
+    border: 1px solid #a0a0a0;
+    padding: 5px 15px;
+    border-radius: 4px;
+    line-height: 30px;
+    transition: all 0.2s;
+}
+.download a.download_btn {
+    display: inline-block;
+    vertical-align: middle;
+}
+
+.download_img{ /* Delete Icon */
+    width: 20px;
+    height: 20px;
+    vertical-align: middle;
+}
+
+.download:hover{
+    border: 1px solid #007bff;
+    background-color: rgba(0, 123, 255, 0.1);
+}
+
+.stop_btn { /* Stop Generation Button */
+    display: block;
+    height: 40px;
+    text-align: center;
+    background-color: rgba(0, 0, 0, .4);
+    font-size: 12px;
+    color: white;
+    text-decoration: none;
+    border: 1px solid #a0a0a0;
+    padding: 5px 20px;
+    border-radius: 4px;
+    line-height: 30px;
+    transition: all 0.2s;
+    white-space: nowrap; /* Verhindert Umbruch */
+}
+
+.stop_btn:hover{
+    border: 1px solid #4dabf7;
+    color: #4dabf7;
+    background-color: rgba(77, 171, 247, 0.1);
+}
+
+
+/* Stile für stream.html (Slider) */
+.wrapper {
+    margin-bottom: 50px;
+}
+
+.slider_big{
+     margin-bottom: 20px;
+     background-color: rgba(0, 0, 0, 0.3);
+     padding: 10px;
+     border-radius: 5px;
+}
+.sliderbig_item video {
+    display: block;
+    margin: 0 auto;
+    max-width: 100%;
+    height: auto;
+    max-height: 60vh;
+    border-radius: 4px;
+}
+
+.slider {
+    position: relative;
+    padding: 0 50px;
+    border: none;
+}
+
+.slick-list {
+    overflow: hidden;
+    margin: 0 auto;
+    max-width: 90%;
+}
+
+.slick-track{
+    display: flex;
+    align-items: center;
+}
+
+.slider_item {
+    padding: 0 5px;
+    cursor: pointer;
+}
+.slider_item video {
+    display: block;
+    width: 100%;
+    height: auto;
+    max-height: 120px;
+    border-radius: 4px;
+    border: 2px solid transparent;
+    transition: border-color 0.2s;
+}
+.slider_item:focus {
+    outline: none;
+}
+
+.slick-current .slider_item video {
+    border: 2px solid #007bff; /* Blauer Rand für aktives Thumbnail */
+}
+
+.slider .slick-arrow{
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    z-index: 10;
+    font-size: 0px;
+    width: 30px;
+    height: 50px;
+    border: none;
+    cursor: pointer;
+    opacity: 0.7;
+    transition: opacity 0.2s;
+}
+.slider .slick-arrow:hover {
+    opacity: 1;
+}
+
+.slick-arrow.slick-prev{
+    left: 10px;
+    background: url('../images/previous.png') center center / 60% no-repeat;
+    background-color: rgba(0, 0, 0, 0.3);
+    border-radius: 4px 0 0 4px;
+}
+
+.slick-arrow.slick-prev:focus{
+    outline: none;
+}
+
+.slick-arrow.slick-next{
+    right: 10px;
+    background: url('../images/next.png') center center / 60% no-repeat;
+    background-color: rgba(0, 0, 0, 0.3);
+    border-radius: 0 4px 4px 0;
+}
+
+.slick-arrow.slick-next:focus{
+    outline: none;
+}
+
+/* ========== Styles für User-Menü mit Logout ========== */
+/* Dieser Block ist jetzt nur noch einmal vorhanden und korrekt platziert */
+
+.user-menu {
+    position: relative;
+    cursor: pointer;
+    padding: 5px;
+}
+
+.user-info {
+    display: flex;
+    align-items: center;
+    color: white;
+}
+
+/* Das Popup, das beim Hover erscheint */
+.logout-popup {
+    display: none; /* Standardmäßig versteckt */
+    position: absolute;
+    top: 100%;
+    right: 0;
+    background-color: rgba(40, 40, 40, 0.95);
+    border-radius: 4px;
+    padding: 8px 0;
+    z-index: 100;
+    min-width: 100px;
+    box-shadow: 0 3px 8px rgba(0,0,0,0.4);
+    text-align: center;
+}
+
+/* WICHTIG: Zeigt das Popup an, wenn über .user-menu gehovert wird */
+.user-menu:hover .logout-popup {
+    display: block;
+}
+
+/* Optional: Kleiner Pfeil über dem Popup (kosmetisch) */
+.logout-popup::before {
+    content: '';
+    position: absolute;
+    bottom: 100%;
+    right: 15px;
+    border-width: 6px;
+    border-style: solid;
+    border-color: transparent transparent rgba(40, 40, 40, 0.95) transparent;
+}
+
+/* Styling für den Logout-Button im Popup */
+.logout-button {
+    display: block;
+    width: 100%;
+    background: none;
+    border: none;
+    padding: 6px 15px;
+    margin: 0;
+    color: #f0f0f0;
+    font-family: inherit;
+    font-size: 14px;
+    text-align: left; /* Linksbündiger Text */
+    cursor: pointer;
+    white-space: nowrap;
+    transition: background-color 0.2s, color 0.2s;
+}
+
+/* Hover-Effekt für den Logout-Button */
+.logout-button:hover {
+    background-color: #007bff; /* Blau als Hover-Hintergrund */
+    color: white;
+}
+
+/* ========== ENDE: Styles für User-Menü ========== */

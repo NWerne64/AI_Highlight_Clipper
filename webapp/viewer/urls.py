@@ -1,14 +1,18 @@
 # webapp/viewer/urls.py
 
 from django.urls import path
-# from django.contrib import admin # Wird hier nicht direkt gebraucht
-
-# Importiere die Views aus der views.py im gleichen Ordner
+# Importiere die eingebaute LogoutView
+from django.contrib.auth.views import LogoutView
+# Importiere deine Views
 from . import views
 
 urlpatterns = [
     # Hauptseite (Login oder Dashboard) - verweist auf views.index
     path('', views.index, name='index'),
+
+    # --- NEUE URL für Logout ---
+    # Beim Aufruf von /logout/ wird der User ausgeloggt und zu 'index' weitergeleitet
+    path('logout/', LogoutView.as_view(next_page='index'), name='logout'),
 
     # Endpunkt zum Hinzufügen/Hochladen eines Streams - verweist auf views.add_stream
     path('add_stream/', views.add_stream, name='add_stream'),
