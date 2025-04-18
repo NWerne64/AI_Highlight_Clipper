@@ -1,0 +1,50 @@
+#generator.html
+<!DOCTYPE html>
+{% load static %}
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link href="https://fonts.googleapis.com/css?family=Lato:100,300,400,700,900" rel="stylesheet">
+    <link rel="stylesheet" type="text/css" href="{% static 'styles/main.css' %}">
+    <title>Generator - {{ stream.stream_name|default:"Video" }}</title>
+</head>
+<body>
+<div class="page">
+
+<header class="header">
+    <div class="container">
+        <div class="header_elements">
+             <a href='/' style="text-decoration: none;  color: #FFFFFF;"><div class="Logo">Stream Clipper</div></a>
+             <div class="user-menu">
+                <div class="user-info">
+                    {{ name }}<img class="user" src="{% static 'images/user.png' %}" alt="">
+                </div>
+                <div class="logout-popup">
+                    <a href="{% url 'logout' %}" class="logout-link">Logout</a>
+                </div>
+             </div>
+             </div>
+    </div>
+</header>
+
+<main class="main">
+    <div class="container">
+        <h2 style="text-align: center; margin-bottom: 20px;">Highlight Generator für: {{ stream.stream_name|default:"Video" }}</h2>
+
+        <div style="background-color: rgba(0,0,0,0.2); padding: 30px; border-radius: 8px; text-align: center;">
+            <p>Hier wird die Logik zum Starten der Highlight-Analyse implementiert werden.</p>
+            <p>Videodatei: {{ stream.video_file.name }}</p>
+            <button style="margin-top: 20px; padding: 10px 20px; cursor: pointer;">Analyse starten (noch nicht implementiert)</button>
+        </div>
+
+        <div style="text-align: center; margin-top: 20px;">
+             <a href="{% url 'video_player' stream_id=stream.id %}">Zurück zum Video</a> |
+             <a href="{% url 'index' %}">Zurück zur Übersicht</a>
+         </div>
+
+    </div>
+</main>
+</div>
+</body>
+</html>
