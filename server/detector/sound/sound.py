@@ -1,103 +1,82 @@
-import argparse
-import numpy as np
-from pathlib import Path
-from time import time
-from time import sleep
-import pandas as pd
-from datetime import datetime, timedelta
-import os
-import cv2
-import subprocess
+# In sound.py
+import moviepy.editor as mp
 import librosa
-import panns_inference
-from panns_inference import AudioTagging, SoundEventDetection, labels
+import numpy as np
+import pandas as pd
+import os
+from datetime import timedelta # Wird evtl. nicht mehr gebraucht
 
-class SoundDetector:
+class SoundDetectorSimplified: # Umbenannt zur Klarheit
 
-    def __init__(self, channel_name: str, stream_features: str, stream_dataframe_name: str):
-
-        self.channel_name = channel_name
+    def __init__(self, stream_dataframe_name: str): # Nur noch ID nötig
         self.stream_dataframe_name = stream_dataframe_name
+        # Nur noch diese Spalten
+        self.output_columns = ['start_time', 'end_time', 'sound_loudness']
+        self.stream_features = pd.DataFrame([], columns=self.output_columns)
+        self.sample_rate = 32000 # Behalte 32k oder wähle andere (z.B. 22050)
+        self.segment_seconds = 1 # Kleinere Segmente für Lautstärke okay? Oder 3s behalten?
+        self.hop_seconds = 0.5 # Kürzere Schritte für feinere Auflösung
 
-        self.stream_features = stream_features
-        self.seconds = 10
-
-        self.stream_video_link = ''
-
-    def process(self, max_sound, labels, start_time):
-
-        i = self.stream_features.shape[0]
-        message_time = datetime.fromtimestamp(time())
-
-        if i == 0:
-            message_time = start_time
+    def analyze_file(self, video_path):
+        print(f"Starting SIMPLIFIED sound analysis (Loudness) for: {video_path}")
+        temp_audio_path = f"{self.stream_dataframe_name}_temp_audio.wav"
 
         try:
-            min_time = self.stream_features.loc[i-1, 'start_time']
-            max_time = self.stream_features.loc[i-1, 'end_time']
-        except:
-            min_time, max_time = None, None
-        if max_time != None and message_time >= min_time and message_time <= max_time:
-            for column_name in self.stream_features.columns[3:]:
-                self.stream_features.loc[i-1, column_name] += labels.query('display_name == @column_name')['prediction'].iloc[0]
-        
-            self.stream_features.loc[i-1, 'sound_loudness'] += max_sound
-        else:
-            self.stream_features.loc[i] = [start_time + timedelta(seconds = self.seconds * i), start_time + timedelta(seconds = self.seconds * (i+1)), 0, 
-            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+            # 1. Audio extrahieren
+            print("Extracting audio...")
+            video_clip = mp.VideoFileClip(video_path)
+            # Konvertiere zu Mono und setze Samplerate direkt bei Extraktion
+            audio_clip = video_clip.audio
+            audio_clip.write_audiofile(temp_audio_path, samplerate=self.sample_rate, nbytes=2, codec='pcm_s16le', ffmpeg_params=["-ac", "1"]) # -ac 1 für Mono
+            video_clip.close()
+            audio_clip.close()
+            print(f"Audio extracted to {temp_audio_path}")
 
-            for column_name in self.stream_features.columns[3:]:
-                self.stream_features.loc[i, column_name] += labels.query('display_name == @column_name')['prediction'].iloc[0]
-        
-            self.stream_features.loc[i, 'sound_loudness'] += max_sound
+            # 2. Audio laden
+            print("Loading audio...")
+            (sound, sr) = librosa.load(temp_audio_path, sr=self.sample_rate, mono=True) # Sicherstellen, dass sr korrekt ist
+            print(f"Audio loaded. Duration: {len(sound) / sr:.2f}s")
 
-        self.stream_features.to_csv(f'{self.stream_dataframe_name}_sound.csv',  index = None) # change later to uid
+            # 3. Lautstärke pro Segment berechnen
+            segment_samples = int(self.segment_seconds * sr)
+            hop_samples = int(self.hop_seconds * sr)
+            results = []
 
-    def start(self, start_time):
-        video_path = f'../../streams/recorded/{self.channel_name}/{self.stream_dataframe_name}.mp4'
-        sound_path = f'../../streams/recorded/{self.channel_name}/{self.stream_dataframe_name}_sound.mp3'
+            print(f"Analyzing loudness in {self.segment_seconds}s segments (hop={self.hop_seconds}s)...")
+            for i in range(0, len(sound) - segment_samples, hop_samples):
+                segment = sound[i : i + segment_samples]
+                current_time_sec = i / sr
 
+                # Lautstärke (RMS)
+                rms = librosa.feature.rms(y=segment)[0]
+                # Vermeide Log von Null oder sehr kleinen Zahlen
+                # loudness_db = librosa.amplitude_to_db(rms, ref=np.max)[0] # dB ist oft intuitiver, hier aber RMS Wert
+                mean_rms = np.mean(rms)
 
-        tot = 0
-        while True:
-            cap = cv2.VideoCapture(video_path)
-            fps = cap.get(cv2.CAP_PROP_FPS)      # OpenCV2 version 2 used "CV_CAP_PROP_FPS"
-            frame_count = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
+                results.append({
+                    'start_time': current_time_sec,
+                    'end_time': current_time_sec + self.segment_seconds,
+                    'sound_loudness': mean_rms
+                })
 
-            if fps < 1:
-                continue
-            dur = int(frame_count/fps)
-            cap.release()
-            
-            subprocess.call(
-                    ["ffmpeg", 
-                    "-i", f"{video_path}",
-                    "-ss", f"{dur-5}",
-                    "-t", "3",
-                    "-map", "0:a",
-                    # "-c", "copy",
-                    f"{sound_path}",
-                    "-y",
-                    ])
+            # 4. Ergebnisse in DataFrame umwandeln und speichern
+            self.stream_features = pd.DataFrame(results, columns=self.output_columns)
+            output_csv_path = f'{self.stream_dataframe_name}_sound.csv'
+            self.stream_features.to_csv(output_csv_path, index=False)
+            print(f"Loudness analysis results saved to {output_csv_path}")
 
-            try:
-                (sound, _) = librosa.load(sound_path, sr=32000, mono=True)
-                max_sound = np.max(sound)
+            return output_csv_path # Gib Pfad zur Ergebnisdatei zurück
 
-                # audio tagging
-                sound = sound[None, :]  # (batch_size, segment_samples)
-                at = AudioTagging()
-                (clipwise_output, embedding) = at.inference(sound)
-                
-                labels = pd.read_csv('../../panns_data/class_labels_indices.csv')
-                labels['prediction'] = clipwise_output.reshape(-1)
-                # labels = labels.sort_values(by = 'prediction', ascending = False)
-
-
-                self.process(max_sound, labels, start_time)
-            except:
-                pass
-
-
-            
-            sleep(1)
+        except Exception as e:
+            print(f"ERROR during simplified sound analysis: {e}")
+            import traceback
+            traceback.print_exc()
+            return None # Signalisiere Fehler
+        finally:
+            # 5. Temporäre Audiodatei löschen
+            if os.path.exists(temp_audio_path):
+                try:
+                    os.remove(temp_audio_path)
+                    print(f"Temporary audio file deleted: {temp_audio_path}")
+                except Exception as e_del:
+                    print(f"Warning: Could not delete temporary audio file {temp_audio_path}: {e_del}")
