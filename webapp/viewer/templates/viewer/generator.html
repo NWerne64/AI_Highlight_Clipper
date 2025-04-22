@@ -1,13 +1,44 @@
-#generator.html
 <!DOCTYPE html>
 {% load static %}
-<html lang="en">
+{% load tags %} <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link href="https://fonts.googleapis.com/css?family=Lato:100,300,400,700,900" rel="stylesheet">
     <link rel="stylesheet" type="text/css" href="{% static 'styles/main.css' %}">
     <title>Generator - {{ stream.stream_name|default:"Video" }}</title>
+    <style>
+        .stats-box {
+            background-color: rgba(0,0,0,0.2);
+            padding: 15px 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            text-align: center;
+            border: 1px solid #444;
+        }
+        .stats-box p { margin: 5px 0; }
+        .stats-box strong { color: #4dabf7; } /* Hellblau */
+
+        .regenerate-section { text-align: center; margin-top: 15px; }
+        .regenerate-button {
+            display: inline-block;
+            padding: 8px 18px;
+            background-color: #28a745; /* Grün */
+            color: white;
+            text-decoration: none;
+            border-radius: 5px;
+            font-weight: 500;
+            border: none;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+        .regenerate-button:hover { background-color: #218838; }
+
+        .highlight-grid { display: flex; flex-wrap: wrap; gap: 20px; justify-content: center; margin-top: 30px; }
+        .highlight-item { background-color: rgba(0,0,0,0.3); padding: 10px; border-radius: 5px; width: 300px; text-align: center; }
+        .highlight-item video { max-width: 100%; height: auto; border-radius: 4px; }
+        .highlight-item p { margin-top: 5px; font-size: 12px; color: #ccc; word-wrap: break-word; }
+    </style>
 </head>
 <body>
 <div class="page">
@@ -21,10 +52,10 @@
                     {{ name }}<img class="user" src="{% static 'images/user.png' %}" alt="">
                 </div>
                 <div class="logout-popup">
-                    <a href="{% url 'logout' %}" class="logout-link">Logout</a>
+                    <form action="{% url 'logout' %}" method="post" style="margin: 0;"> {% csrf_token %} <button type="submit" class="logout-button">Logout</button> </form>
                 </div>
              </div>
-             </div>
+        </div>
     </div>
 </header>
 
@@ -32,19 +63,55 @@
     <div class="container">
         <h2 style="text-align: center; margin-bottom: 20px;">Highlight Generator für: {{ stream.stream_name|default:"Video" }}</h2>
 
-        <div style="background-color: rgba(0,0,0,0.2); padding: 30px; border-radius: 8px; text-align: center;">
-            <p>Hier wird die Logik zum Starten der Highlight-Analyse implementiert werden.</p>
-            <p>Videodatei: {{ stream.video_file.name }}</p>
-            <button style="margin-top: 20px; padding: 10px 20px; cursor: pointer;">Analyse starten (noch nicht implementiert)</button>
+        <div class="stats-box">
+            <p>Analyse-Status: <strong>{{ stream.get_analysis_status_display }}</strong></p>
+            {% if stream.analysis_status == 'COMPLETE' or stream.avg_loudness is not None %}
+                <p>Durchschnittliche Lautstärke (RMS): <strong>{{ stream.avg_loudness|floatformat:4 }}</strong></p>
+                <p>90. Perzentil Lautstärke (RMS): <strong>{{ stream.p90_loudness|floatformat:4 }}</strong></p>
+                <p>Maximale Lautstärke (RMS): <strong>{{ stream.max_loudness|floatformat:4 }}</strong></p>
+                <p style="font-size: smaller; color: #aaa;">(CSV gespeichert unter: {{ stream.sound_csv_path }})</p>
+                <div class="regenerate-section">
+                    <p style="margin-bottom: 10px;">Highlights neu generieren (verwendet Threshold: {{ default_threshold|floatformat:4 }} aus Konfiguration):</p>
+                    <a href="{% url 'regenerate_highlights' stream_id=stream.id %}" class="regenerate-button">
+                        Neu generieren
+                    </a>
+                </div>
+            {% elif stream.analysis_status == 'PROCESSING' %}
+                <p>Analyse läuft aktuell...</p>
+            {% elif stream.analysis_status == 'ERROR' %}
+                <p style="color: red;">Fehler bei der Analyse aufgetreten.</p>
+            {% else %}
+                <p>Analyse steht noch aus oder wurde nicht gestartet.</p>
+            {% endif %}
         </div>
 
-        <div style="text-align: center; margin-top: 20px;">
-             <a href="{% url 'video_player' stream_id=stream.id %}">Zurück zum Video</a> |
-             <a href="{% url 'index' %}">Zurück zur Übersicht</a>
-         </div>
+        <hr>
+        <h3 style="text-align: center; margin-top: 30px;">Gefundene Highlights</h3>
 
+        <div class="highlight-grid">
+            {% for clip in clips_data %}
+                <div class="highlight-item">
+                    <video controls preload="metadata">
+                        <source src="{{ clip.media_url }}" type="video/mp4">
+                        Dein Browser unterstützt das Video-Tag nicht.
+                    </video>
+                    <p>{{ clip.clip_link }}</p>
+                </div>
+             {% empty %}
+                 <p>Noch keine Highlights für dieses Video gefunden.</p>
+                 {% if stream.analysis_status == 'COMPLETE' %}
+                 <p>(Möglicherweise war der Lautstärke-Threshold zu hoch? Aktuell: {{ default_threshold|floatformat:4 }})</p>
+                 {% endif %}
+            {% endfor %}
+        </div>
+
+        <div style="text-align: center; margin-top: 40px; padding-bottom: 40px;">
+             <a href="{% url 'video_player' stream_id=stream.id %}" style="margin-right: 15px;">Zurück zum Video</a> |
+             <a href="{% url 'index' %}" style="margin-left: 15px;">Zurück zur Übersicht</a>
+         </div>
     </div>
 </main>
+
 </div>
 </body>
 </html>

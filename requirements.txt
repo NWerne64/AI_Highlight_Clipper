@@ -1,5 +1,15 @@
-django
+# AI_Highlight_Clipper/requirements.txt
+
+django>=3.2  # Oder deine Version
+Pillow>=9.0  # Wichtig für FileField
+
+# Für die Lautstärke-Analyse
+librosa>=0.8
 numpy
 pandas
-twitch-python
-rx
+moviepy>=1.0.3
+
+# Optional, falls noch genutzt (wahrscheinlich nicht mehr)
+# twitch-python
+# rx
+# requests
