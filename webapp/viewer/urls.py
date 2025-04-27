@@ -1,4 +1,4 @@
-# webapp/viewer/urls.py
+# AI_Highlight_Clipper/webapp/viewer/urls.py
 
 from django.urls import path
 from django.contrib.auth.views import LogoutView

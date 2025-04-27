@@ -13,7 +13,7 @@ html {
 body {
     /* Blauer Farbverlauf */
     background: linear-gradient(50deg, #001f3f 20%, #0a2d50 49%, #007bff 71%);
-    font-family: 'Montserrat', sans-serif; /* Fallback hinzufügen: font-family: 'Montserrat', sans-serif, Arial, Helvetica; */
+    font-family: 'Montserrat', sans-serif, Arial, Helvetica; /* Fallback Fonts hinzugefügt */
     font-weight: 400;
     font-size: 16px;
     line-height: 1.7;
@@ -25,7 +25,14 @@ body {
     background: inherit;
     position: relative;
     padding-bottom: 70px; /* Platz für Footer */
+    display: flex; /* Flexbox für sticky footer */
+    flex-direction: column;
 }
+
+main.main {
+    flex-grow: 1; /* Lässt den Main-Bereich wachsen */
+}
+
 
 .header {
     background-color: rgba(5, 5, 5, .6);
@@ -55,24 +62,29 @@ body {
     text-decoration: none;
 }
 
-.header_elements a:first-child { /* Styling für den Link um das Logo */
+.header_elements a:first-child {
      text-decoration: none;
      color: inherit;
 }
 
-
-.Logo .span { /* Span innerhalb des Logos stylen */
+.Logo .span {
     color: #4dabf7; /* Helles Blau */
     font-weight: 700;
     font-size: 28px;
 }
 
-/* Redundante .header_user Regel, kann bleiben oder weg, wenn nicht mehr genutzt */
-.header_user {
+/* User Menu Container im Header */
+.user-menu {
     position: relative;
-    font-size: 15px;
+    cursor: pointer;
+    padding: 5px;
+}
+
+.user-info {
     display: flex;
     align-items: center;
+    color: white;
+    font-size: 15px;
 }
 
 .user { /* Das Icon neben dem Usernamen */
@@ -82,6 +94,60 @@ body {
     vertical-align: middle;
 }
 
+/* Das Logout-Popup, das beim Hover erscheint */
+.logout-popup {
+    display: none; /* Standardmäßig versteckt */
+    position: absolute;
+    top: 100%;
+    right: 0;
+    background-color: rgba(40, 40, 40, 0.95);
+    border-radius: 4px;
+    padding: 8px 0;
+    z-index: 100;
+    min-width: 100px;
+    box-shadow: 0 3px 8px rgba(0,0,0,0.4);
+    text-align: center;
+}
+
+/* Zeigt das Popup an, wenn über .user-menu gehovert wird */
+.user-menu:hover .logout-popup {
+    display: block;
+}
+
+/* Optional: Kleiner Pfeil über dem Popup */
+.logout-popup::before {
+    content: '';
+    position: absolute;
+    bottom: 100%;
+    right: 15px;
+    border-width: 6px;
+    border-style: solid;
+    border-color: transparent transparent rgba(40, 40, 40, 0.95) transparent;
+}
+
+/* Styling für den Logout-Button im Popup */
+.logout-button {
+    display: block;
+    width: 100%;
+    background: none;
+    border: none;
+    padding: 6px 15px;
+    margin: 0;
+    color: #f0f0f0;
+    font-family: inherit;
+    font-size: 14px;
+    text-align: left;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: background-color 0.2s, color 0.2s;
+}
+
+.logout-button:hover {
+    background-color: #007bff;
+    color: white;
+}
+
+/* Control Panel Link (für Staff User) */
 .control_panel {
     display: inline-block;
     background-color: rgba(0, 0, 0, .2);
@@ -92,7 +158,7 @@ body {
     padding: 5px 15px;
     border-radius: 4px;
     transition: all 0.2s;
-    margin-left: 20px;
+    margin-left: 20px; /* Beispiel Abstand */
 }
 
 .control_panel:hover{
@@ -102,32 +168,31 @@ body {
 }
 
 /* Upload Form Styling */
-/* Gezielterer Selektor mit ID wäre besser, falls es andere Forms gibt */
-main form {
+main form#upload-form { /* Spezifischer Selektor, falls ID gesetzt */
     background-color: rgba(255, 255, 255, 0.1);
     padding: 20px;
     border-radius: 8px;
     margin-bottom: 40px;
 }
 
-main form h2 {
+main form#upload-form h2 {
     color: white;
     margin-bottom: 15px;
 }
 
-main form input[type="text"],
-main form input[type="file"] {
+main form#upload-form input[type="text"],
+main form#upload-form input[type="file"] {
     display: block;
     width: 100%;
     padding: 10px;
     margin-bottom: 15px;
-    border: 1px solid #007bff; /* Blauer Rahmen */
+    border: 1px solid #007bff;
     background-color: rgba(0, 0, 0, 0.2);
     color: white;
     border-radius: 4px;
 }
 
-main form input[type="file"]::file-selector-button {
+main form#upload-form input[type="file"]::file-selector-button {
     background-color: #007bff;
     color: white;
     border: none;
@@ -136,11 +201,11 @@ main form input[type="file"]::file-selector-button {
     cursor: pointer;
     margin-right: 10px;
 }
-main form input[type="file"]::file-selector-button:hover {
+main form#upload-form input[type="file"]::file-selector-button:hover {
     background-color: #0056b3;
 }
 
-main form button[type="submit"] {
+main form#upload-form button[type="submit"] {
     padding: 10px 25px;
     font-weight: 500;
     border: none;
@@ -150,7 +215,7 @@ main form button[type="submit"] {
     cursor: pointer;
     transition: background-color 0.2s;
 }
-main form button[type="submit"]:hover {
+main form#upload-form button[type="submit"]:hover {
      background-color: #0056b3;
 }
 
@@ -165,109 +230,167 @@ main form button[type="submit"]:hover {
 .line {
    display: flex;
    flex-wrap: wrap;
-   /* Syntaxfehler behoben - verwendet space-between für gleichmäßige Verteilung */
+   /* Korrigierter Wert: Verteilt Platz */
    justify-content: space-between;
-   gap: 20px;
+   gap: 20px; /* Abstand zwischen den 'stream-entry' Containern */
    margin-bottom: 20px;
 }
 
-.video {
+/* Wrapper für ein einzelnes Stream-Element (wird nicht mehr gebraucht, wenn .video direkt in .line) */
+/* .stream-entry { ... } */
+
+/* Video-Container ANPASSEN für Hover-Effekt */
+.video { /* video-hover-container Klasse ist optional */
     display: block;
-    flex: 1 1 280px; /* Lässt Videos wachsen/schrumpfen, Basis 280px */
-    max-width: 300px; /* Max. Breite pro Video */
-    min-height: 150px;
-    background-color: rgba(0, 0, 0, .5);
-    text-align: center;
-    margin-bottom: 10px; /* Nur Abstand nach unten */
+    flex: 1 1 280px; /* Responsive Breite */
+    max-width: 300px;
+    aspect-ratio: 16 / 9; /* Seitenverhältnis */
+    background-color: rgba(0, 0, 0, .7);
     border-radius: 8px;
-    overflow: hidden;
-    position: relative;
-    color: white;
-    text-decoration: none;
-}
-.video a { /* Stellt sicher, dass der Link das Video-Div ausfüllt */
-     color: inherit;
-     text-decoration: none;
-     display: block;
-     height: 100%;
+    overflow: hidden; /* Wichtig für Overlays */
+    position: relative; /* WICHTIG für absolute Positionierung */
+    cursor: default; /* Standard Mauszeiger, da der Link innen ist */
+    transition: transform 0.2s ease-in-out;
+    margin-bottom: 10px; /* Beibehaltung des unteren Abstands */
 }
 
-.play { /* Das Play-Icon */
-    display: block;
-    width: 60px;
-    height: 60px;
+.video:hover {
+    transform: scale(1.03);
+}
+
+/* Optional: Hintergrundbild */
+.video-background-image {
+    position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+    object-fit: cover; z-index: 1; opacity: 0.5;
+}
+
+/* Gemeinsame Stile für Overlay-Buttons/Formulare */
+.video-overlay-button {
     position: absolute;
     top: 50%;
-    left: 50%;
-    transform: translate(-50%, -60%); /* Zentriert und leicht nach oben */
-    opacity: 0.7;
-    transition: all .3s;
+    transform: translateY(-50%);
+    background-color: rgba(0, 0, 0, 0.6);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: none;
+    cursor: pointer;
+    z-index: 2;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.2s ease-in-out, visibility 0s linear 0.2s;
 }
 
-.video:hover .play {
-    transform: translate(-50%, -60%) scale(1.2);
+/* Play-Button (Link) */
+.play-button {
+    left: 15px; /* Position links */
+    width: 50px;
+    height: 50px;
+    padding: 10px;
+}
+.play-button img { /* Icon im Play Button */
+    height: 25px;
+    width: auto;
+    display: block;
+}
+.play-button:hover {
+     background-color: rgba(0, 123, 255, 0.8); /* Blauer Hover */
+}
+
+/* Delete-Formular */
+.delete-form {
+    right: 15px; /* Position rechts */
+    width: 45px;
+    height: 45px;
+    background-color: rgba(200, 0, 0, 0.6); /* Rötlich */
+    padding: 0;
+}
+/* Button innerhalb des Delete-Formulars */
+.delete-button-overlay {
+    background: none;
+    border: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    height: 100%;
+    cursor: pointer;
+}
+.delete-button-overlay img { /* Delete Icon */
+    height: 18px;
+    width: auto;
+    filter: brightness(0) invert(1); /* Macht Icon weiß */
+}
+.delete-form:hover {
+    background-color: rgba(255, 0, 0, 0.8); /* Helleres Rot im Hover */
+}
+
+/* Zeigt die Buttons beim Hover über .video an */
+.video:hover .video-overlay-button {
     opacity: 1;
+    visibility: visible;
+    transition: opacity 0.2s ease-in-out;
 }
 
-.text_video { /* Der Text unter dem Play-Icon */
+/* Video-Titel unten */
+.text_video {
     position: absolute;
     bottom: 0px;
     left: 0;
     right: 0;
     color: #FFF;
     font-size: 13px;
-    background-color: rgba(0, 0, 0, 0.6);
-    padding: 5px;
+    background: linear-gradient(to top, rgba(0,0,0,0.9) 0%, rgba(0,0,0,0) 100%);
+    padding: 20px 10px 8px 10px;
     text-align: center;
-    /* Verhindert Umbruch und zeigt ... bei Überlauf */
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+    z-index: 1; /* Hinter den Buttons */
 }
 
-.video:hover .text_video {
-    text-decoration: underline;
-}
 
 /* Footer */
 .footer {
-    position: absolute;
+    position: absolute; /* Stellt sicher, dass er unten ist, wenn .page nicht voll */
     left: 0;
     bottom: 0;
     width: 100%;
-    height: 50px;
+    height: 50px; /* Feste Höhe */
     background-color: rgba(5, 5, 5, .7);
     text-align: center;
+    margin-top: auto; /* Schiebt Footer nach unten im Flex-Container .page */
 }
 
 .copyright {
     color: #a0a0a0;
     font-size: 14px;
-    padding-top: 15px;
+    line-height: 50px; /* Vertikal zentrieren in fester Höhe */
 }
 
 /* Stile für stream.html (Top Elements) */
-.main { /* Gilt auch für stream.html, da die Klasse verwendet wird */
-    margin-bottom: 20px;
-}
+/* .main Selektor gilt auch hier */
 
-.top_elements{ /* Container für Titel, Stop, Delete auf stream.html */
+.top_elements{
     display: flex;
-    max-width: 550px; /* Breite anpassen, falls nötig */
-    margin: 0 auto 30px auto; /* Zentrieren */
+    max-width: 550px;
+    margin: 0 auto 30px auto;
     align-items: center;
     justify-content: space-between;
     gap: 15px;
 }
 
-.heading { /* Stream-Titel */
+.heading {
     display: block;
     color: #FFF;
     font-weight: 700;
     font-size: 20px;
-    margin-right: auto; /* Schiebt andere Buttons nach rechts */
+    margin-right: auto;
 }
-.download { /* Delete-Button Container */
+.download { /* Delete-Button Container auf stream.html */
     display: block;
     height: 40px;
     background-color: rgba(0, 0, 0, .4);
@@ -282,7 +405,7 @@ main form button[type="submit"]:hover {
     vertical-align: middle;
 }
 
-.download_img{ /* Delete Icon */
+.download_img{
     width: 20px;
     height: 20px;
     vertical-align: middle;
@@ -293,7 +416,7 @@ main form button[type="submit"]:hover {
     background-color: rgba(0, 123, 255, 0.1);
 }
 
-.stop_btn { /* Stop Generation Button */
+.stop_btn {
     display: block;
     height: 40px;
     text-align: center;
@@ -306,7 +429,7 @@ main form button[type="submit"]:hover {
     border-radius: 4px;
     line-height: 30px;
     transition: all 0.2s;
-    white-space: nowrap; /* Verhindert Umbruch */
+    white-space: nowrap;
 }
 
 .stop_btn:hover{
@@ -413,73 +536,20 @@ main form button[type="submit"]:hover {
     outline: none;
 }
 
-/* ========== Styles für User-Menü mit Logout ========== */
-/* Dieser Block ist jetzt nur noch einmal vorhanden und korrekt platziert */
-
+/* --- Styles für User-Menü (Logout) --- */
+/* (Dieser Block sollte nur einmal existieren) */
 .user-menu {
     position: relative;
     cursor: pointer;
     padding: 5px;
 }
 
-.user-info {
-    display: flex;
-    align-items: center;
-    color: white;
-}
+/* ... (Rest der User-Menu/Logout Styles wie zuvor) ... */
+.user-info { display: flex; align-items: center; color: white; }
+.logout-popup { display: none; position: absolute; top: 100%; right: 0; background-color: rgba(40, 40, 40, 0.95); border-radius: 4px; padding: 8px 0; z-index: 100; min-width: 100px; box-shadow: 0 3px 8px rgba(0,0,0,0.4); text-align: center; }
+.user-menu:hover .logout-popup { display: block; }
+.logout-popup::before { content: ''; position: absolute; bottom: 100%; right: 15px; border-width: 6px; border-style: solid; border-color: transparent transparent rgba(40, 40, 40, 0.95) transparent; }
+.logout-button { display: block; width: 100%; background: none; border: none; padding: 6px 15px; margin: 0; color: #f0f0f0; font-family: inherit; font-size: 14px; text-align: left; cursor: pointer; white-space: nowrap; transition: background-color 0.2s, color 0.2s; }
+.logout-button:hover { background-color: #007bff; color: white; }
 
-/* Das Popup, das beim Hover erscheint */
-.logout-popup {
-    display: none; /* Standardmäßig versteckt */
-    position: absolute;
-    top: 100%;
-    right: 0;
-    background-color: rgba(40, 40, 40, 0.95);
-    border-radius: 4px;
-    padding: 8px 0;
-    z-index: 100;
-    min-width: 100px;
-    box-shadow: 0 3px 8px rgba(0,0,0,0.4);
-    text-align: center;
-}
-
-/* WICHTIG: Zeigt das Popup an, wenn über .user-menu gehovert wird */
-.user-menu:hover .logout-popup {
-    display: block;
-}
-
-/* Optional: Kleiner Pfeil über dem Popup (kosmetisch) */
-.logout-popup::before {
-    content: '';
-    position: absolute;
-    bottom: 100%;
-    right: 15px;
-    border-width: 6px;
-    border-style: solid;
-    border-color: transparent transparent rgba(40, 40, 40, 0.95) transparent;
-}
-
-/* Styling für den Logout-Button im Popup */
-.logout-button {
-    display: block;
-    width: 100%;
-    background: none;
-    border: none;
-    padding: 6px 15px;
-    margin: 0;
-    color: #f0f0f0;
-    font-family: inherit;
-    font-size: 14px;
-    text-align: left; /* Linksbündiger Text */
-    cursor: pointer;
-    white-space: nowrap;
-    transition: background-color 0.2s, color 0.2s;
-}
-
-/* Hover-Effekt für den Logout-Button */
-.logout-button:hover {
-    background-color: #007bff; /* Blau als Hover-Hintergrund */
-    color: white;
-}
-
-/* ========== ENDE: Styles für User-Menü ========== */
+/* --- ENDE --- */

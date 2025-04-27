@@ -1,16 +1,11 @@
 <!DOCTYPE html>
-
 {% load static %}
-
 {% load tags %} <html lang="en">
     <head>
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
         <link href="https://fonts.googleapis.com/css?family=Lato:100,300,400,700,900" rel="stylesheet">
-
         <link rel="stylesheet" type="text/css" href="{% static 'styles/main.css' %}">
-
         <title>Main Page</title>
     </head>
     <body>
@@ -19,7 +14,6 @@
 
 <header class="header">
     <div class="container">
-
         <div class="header_elements">
              <a href='/' style="text-decoration: none;  color: #FFFFFF;"><div class="Logo">Stream Clipper</div></a>
              <div class="user-menu">
@@ -27,45 +21,65 @@
                     {{ name }}<img class="user" src="{% static 'images/user.png' %}" alt="">
                 </div>
                 <div class="logout-popup">
-                    <div class="logout-popup">
-                        <form action="{% url 'logout' %}" method="post" style="margin: 0;"> {% csrf_token %}
-                            <button type="submit" class="logout-button">Logout</button> </form>
-                    </div>
+                    <form action="{% url 'logout' %}" method="post" style="margin: 0;"> {% csrf_token %}
+                        <button type="submit" class="logout-button">Logout</button> </form>
                 </div>
              </div>
              </div>
     </div>
-    </header>
+</header>
 
-     <main class="main">
-        <div class="container">
+<main class="main">
+    <div class="container">
         {% if is_staff %}
-         <a href="{% url 'admin:index' %}" class="control_panel">Control Panel</a> {% endif %}
+         <a href="{% url 'admin:index' %}" class="control_panel">Control Panel</a>
+        {% endif %}
 
-        <h2>Video hochladen</h2>
-        <form method="post" enctype="multipart/form-data" action="{% url 'add_stream' %}">
+        <form id="upload-form" method="post" enctype="multipart/form-data" action="{% url 'add_stream' %}">
+             <h2>Video hochladen</h2>
             {% csrf_token %}
-            {{ upload_form.as_p }} <button type="submit" class="search-btn">Hochladen</button> </form>
-        <hr> <h2>Vorhandene Streams</h2>
+            {{ upload_form.as_p }}
+            <button type="submit" class="search-btn" style="padding: 10px 25px; cursor: pointer;">Hochladen</button>
+         </form>
+        <hr>
+        <h2>Vorhandene Streams</h2>
 
         <div class="video_lines">
             {% for stream in stream_data %}
-                {% if forloop.counter|modulo:3 == 1 %}
+                {% if forloop.counter0|modulo:3 == 0 %}
                     <div class="line">
-                        <div class="video"><a href="{% url 'video_player' stream_id=stream.id %}"><img class = "play" src="{% static 'images/play.png' %}" alt=""><span class="text_video">{{stream.stream_name}}</span></a></div>
-                {% elif forloop.counter|modulo:3 == 0 %}
-                        <div class="video"><a href="{% url 'video_player' stream_id=stream.id %}"><img class = "play" src="{% static 'images/play.png' %}" alt=""><span class="text_video">{{stream.stream_name}}</span></a></div>
-                    </div> {% else %}
-                        <div class="video"><a href="{% url 'video_player' stream_id=stream.id %}"><img class = "play" src="{% static 'images/play.png' %}" alt=""><span class="text_video">{{stream.stream_name}}</span></a></div>
                 {% endif %}
 
-                {% if forloop.last and forloop.counter|modulo:3 != 0 %}
+                        <div class="video video-hover-container">
+                            <div class="video-background"></div>
+
+                            <a href="{% url 'video_player' stream_id=stream.id %}" class="video-overlay-button play-button" title="Video ansehen">
+                                <img src="{% static 'images/play.png' %}" alt="Play">
+                            </a>
+
+                            <form action="{% url 'delete_stream' stream_id=stream.id %}" method="post" class="video-overlay-button delete-form" onsubmit="return confirm('Stream \'{{ stream.stream_name|default:stream.stream_link|escapejs }}\' und alle zugehörigen Daten wirklich löschen?');">
+                                {% csrf_token %}
+                                <button type="submit" class="delete-button-overlay" title="Stream löschen">
+                                    <img src="{% static 'images/delete.png' %}" alt="Löschen">
+                                </button>
+                            </form>
+
+                            <span class="text_video">{{ stream.stream_name|default:stream.stream_link }}</span>
+                        </div>
+
+                {% if forloop.counter|modulo:3 == 0 or forloop.last %}
                     </div> {% endif %}
              {% empty %}
                  <p>Noch keine Streams vorhanden. Lade dein erstes Video hoch!</p>
             {% endfor %}
 
         </div> </div> </main>
-        </div> </body>
 
+<footer class="footer">
+    <div class="container">
+        <div class="copyright">Copyright ©</div>
+    </div>
+</footer>
+
+</div> </body>
 </html>
