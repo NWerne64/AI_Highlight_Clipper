@@ -11,7 +11,7 @@ import traceback
 import threading
 
 try:
-    from django.conf import settings # Für MEDIA_ROOT Zugriff
+    from django.conf import settings
     from .models import Stream, StreamHighlight
     MODELS_AVAILABLE = True
 except ImportError as e:
@@ -19,10 +19,10 @@ except ImportError as e:
     Stream = None
     StreamHighlight = None
     MODELS_AVAILABLE = False
-    settings = None # Sicherstellen, dass settings nicht undefiniert ist
+    settings = None
 
 # --- Konfiguration ---
-LOUDNESS_THRESHOLD = 0.08 # !!! Standard-Threshold für initiale Analyse & Re-Generierung !!!
+LOUDNESS_THRESHOLD = 0.08 # Standard-Threshold (wird bei Re-Generate überschrieben)
 CLIP_DURATION_S = 5
 TARGET_SAMPLE_RATE = 22050
 SEGMENT_SECONDS = 0.5
@@ -38,22 +38,22 @@ class SoundDetectorSimplified:
         self.segment_seconds = SEGMENT_SECONDS
         self.hop_seconds = HOP_SECONDS
 
-    # Gibt jetzt CSV-Pfad und Statistiken zurück
-    def analyze_file(self, video_path, stream_media_dir): # Nimmt Zielordner für CSV entgegen
+    # Gibt jetzt CSV-Pfad und alle 4 Statistiken zurück (Avg, P90, P95, Max)
+    def analyze_file(self, video_path, stream_media_dir):
         base_name = f"stream_{self.stream_dataframe_name}_loudness"
-        # Temporäre Audio-Datei im Projektstamm/analysis_temp
         temp_dir = "analysis_temp"
         os.makedirs(temp_dir, exist_ok=True)
         temp_audio_path = os.path.join(temp_dir, f"{base_name}_temp_audio.wav")
-        # CSV-Datei im spezifischen media-Ordner des Streams speichern
         output_csv_path = os.path.join(stream_media_dir, f"{base_name}_sound.csv")
 
         thread_id = threading.get_ident()
         log_prefix = f"[Thread-{thread_id} Analysis] "
         print(log_prefix + f"Starting sound analysis for: {video_path}")
+        # Initialisiere Statistik-Werte
         max_loudness_found = 0.0
         avg_loudness = 0.0
         p90_loudness = 0.0
+        p95_loudness = 0.0 # NEU
 
         try:
             # 1. Audio extrahieren
@@ -89,37 +89,41 @@ class SoundDetectorSimplified:
 
             print(log_prefix + f"Loudness analysis finished (took {time.time() - t_start_rms:.2f}s)")
             if not results:
-                 print(log_prefix + "No loudness segments generated.")
-                 return None, 0.0, 0.0, 0.0 # Gib Nullen zurück
+                print(log_prefix + "No loudness segments generated.")
+                return None, 0.0, 0.0, 0.0, 0.0 # Gib Nullen zurück
 
             # 4. Ergebnisse & Statistiken berechnen/speichern
             self.stream_features = pd.DataFrame(results, columns=self.output_columns)
             self.stream_features.to_csv(output_csv_path, index=False)
             print(log_prefix + f"Loudness results saved to {output_csv_path}")
 
+            # Berechne Statistiken
             loudness_series = pd.Series(all_rms_values)
             avg_loudness = loudness_series.mean()
             p90_loudness = loudness_series.quantile(0.90)
+            p95_loudness = loudness_series.quantile(0.95) # NEU berechnen
             max_loudness_found = loudness_series.max()
-            print(log_prefix + f"Loudness Stats: Avg={avg_loudness:.4f}, 90th Percentile={p90_loudness:.4f}, Max={max_loudness_found:.4f}")
+            print(log_prefix + f"Loudness Stats: Avg={avg_loudness:.4f}, P90={p90_loudness:.4f}, P95={p95_loudness:.4f}, Max={max_loudness_found:.4f}")
 
-            return output_csv_path, avg_loudness, p90_loudness, max_loudness_found
+            # Gib CSV-Pfad und ALLE Statistiken zurück
+            return output_csv_path, avg_loudness, p90_loudness, p95_loudness, max_loudness_found
 
         except FileNotFoundError:
              print(log_prefix + f"ERROR: ffmpeg command not found.")
-             return None, 0.0, 0.0, 0.0
+             return None, 0.0, 0.0, 0.0, 0.0
         except Exception as e:
             print(log_prefix + f"ERROR during simplified sound analysis: {e}")
             traceback.print_exc()
-            return None, 0.0, 0.0, 0.0
+            return None, 0.0, 0.0, 0.0, 0.0
         finally:
             if os.path.exists(temp_audio_path):
                 try: os.remove(temp_audio_path); print(log_prefix + f"Deleted temp audio.")
                 except Exception as e_del: print(log_prefix + f"Warning: Could not delete temp audio: {e_del}")
 
 # --- Highlight-Logik ---
+# (Bleibt unverändert, akzeptiert 'threshold' bereits)
 def find_highlights_by_loudness(sound_csv_path, video_path, stream_id, user_name, threshold):
-    # ... (Funktion bleibt exakt wie im vorigen Beispiel, inkl. Löschen alter Highlights) ...
+    # ... (Kompletter Code wie im vorigen Beispiel, inkl. Löschen alter Highlights) ...
     thread_id = threading.get_ident()
     log_prefix = f"[Thread-{thread_id} HighlightFind] "
 
@@ -140,7 +144,8 @@ def find_highlights_by_loudness(sound_csv_path, video_path, stream_id, user_name
         loud_start_times = df[df['sound_loudness'] > threshold]['start_time'].tolist()
         if not loud_start_times:
             print(log_prefix + "No segments found above threshold.")
-            # Wichtig: Alte Highlights wurden evtl. gelöscht, aber keine neuen gefunden
+            # Alte Highlights löschen, falls vorhanden
+            StreamHighlight.objects.filter(user_id=user_name, stream_link=stream_obj.stream_link).delete()
             return []
 
         print(log_prefix + f"Found {len(loud_start_times)} segments above threshold. Extracting {CLIP_DURATION_S}s clips...")
@@ -151,7 +156,7 @@ def find_highlights_by_loudness(sound_csv_path, video_path, stream_id, user_name
              print(log_prefix + f"  Deleting {old_highlights.count()} old highlight entries/files...")
              for hl in old_highlights:
                   try:
-                       if hl.clip_link and settings: # Prüfe ob settings importiert wurde
+                       if hl.clip_link and settings:
                             clip_full_path = os.path.join(settings.MEDIA_ROOT, hl.clip_link)
                             if os.path.exists(clip_full_path): os.remove(clip_full_path)
                   except Exception as e_del_old: print(f"  Warning: Could not delete old clip file {hl.clip_link}: {e_del_old}")
@@ -183,10 +188,9 @@ def find_highlights_by_loudness(sound_csv_path, video_path, stream_id, user_name
                 print(log_prefix + f"  Clip extracted: {clip_output_path}")
 
                 relative_clip_path = ""
-                try: # Relativen Pfad sicher berechnen
+                try:
                      if settings:
-                          media_root = settings.MEDIA_ROOT
-                          relative_clip_path = os.path.relpath(clip_output_path, media_root).replace('\\', '/')
+                          relative_clip_path = os.path.relpath(clip_output_path, settings.MEDIA_ROOT).replace('\\', '/')
                           if "../" in relative_clip_path: raise ValueError("Clip path outside media root")
                      else: raise ValueError("Settings not available")
                 except Exception:
@@ -222,6 +226,7 @@ def find_highlights_by_loudness(sound_csv_path, video_path, stream_id, user_name
 
 
 # --- Hauptfunktion für den Thread ---
+# Aktualisiert jetzt das Stream-Objekt mit allen 4 Statistiken
 def run_analysis_and_extraction_thread(video_path, stream_id, user_name):
     thread_id = threading.get_ident()
     log_prefix = f"[Thread-{thread_id}] "
@@ -234,20 +239,24 @@ def run_analysis_and_extraction_thread(video_path, stream_id, user_name):
 
     analysis_run_id = f"{stream_id}"
     stream_obj = None
-    relative_csv_path_for_db = None # Zum Speichern in DB
+    relative_csv_path_for_db = None
 
     try:
-        # Status auf PROCESSING setzen
-        # (Innerhalb des Threads, um DB-Zugriffe zu bündeln)
         stream_obj = Stream.objects.get(id=stream_id)
         stream_obj.analysis_status = 'PROCESSING'
-        stream_obj.save(update_fields=['analysis_status'])
+        # Lösche alte Statistikwerte vor Neuberechnung
+        stream_obj.avg_loudness = None
+        stream_obj.p90_loudness = None
+        stream_obj.p95_loudness = None
+        stream_obj.max_loudness = None
+        stream_obj.sound_csv_path = None
+        stream_obj.save(update_fields=['analysis_status', 'avg_loudness', 'p90_loudness', 'p95_loudness', 'max_loudness', 'sound_csv_path'])
 
         # 1. Lautstärke-Analyse
-        # Übergib den Zielordner für die CSV
         stream_media_dir = os.path.dirname(video_path)
         sound_detector = SoundDetectorSimplified(stream_dataframe_name=analysis_run_id)
-        sound_csv_full_path, avg_loudness, p90_loudness, max_loudness = sound_detector.analyze_file(video_path, stream_media_dir)
+        # Bekommt jetzt 5 Werte zurück
+        sound_csv_full_path, avg_loudness, p90_loudness, p95_loudness, max_loudness = sound_detector.analyze_file(video_path, stream_media_dir)
 
         # Berechne relativen Pfad für DB
         if sound_csv_full_path and settings:
@@ -258,33 +267,35 @@ def run_analysis_and_extraction_thread(video_path, stream_id, user_name):
                   relative_csv_path_for_db = os.path.join(os.path.basename(stream_media_dir), os.path.basename(sound_csv_full_path)).replace('\\','/')
 
         # Aktualisiere Stream-Objekt mit Ergebnissen
-        stream_obj.refresh_from_db()
-        stream_obj.sound_csv_path = relative_csv_path_for_db # Relativen Pfad speichern
+        stream_obj.refresh_from_db() # Hole aktuelle Version
+        stream_obj.sound_csv_path = relative_csv_path_for_db
         stream_obj.avg_loudness = avg_loudness
         stream_obj.p90_loudness = p90_loudness
+        stream_obj.p95_loudness = p95_loudness # NEU speichern
         stream_obj.max_loudness = max_loudness
 
         if sound_csv_full_path and os.path.exists(sound_csv_full_path):
             print(log_prefix + f"Starting initial highlight finding for {sound_csv_full_path}")
             find_highlights_by_loudness(
-                sound_csv_path=sound_csv_full_path, # Voller Pfad zur Funktion
+                sound_csv_path=sound_csv_full_path,
                 video_path=video_path,
                 stream_id=stream_id,
                 user_name=user_name,
-                threshold=LOUDNESS_THRESHOLD
+                threshold=LOUDNESS_THRESHOLD # Initiale Generierung mit Default
             )
             stream_obj.analysis_status = 'COMPLETE'
         else:
             print(log_prefix + f"Sound analysis failed. Skipping highlight detection.")
             stream_obj.analysis_status = 'ERROR'
 
-        stream_obj.save(update_fields=['analysis_status', 'sound_csv_path', 'avg_loudness', 'p90_loudness', 'max_loudness'])
+        # Speichere alle aktualisierten Felder
+        stream_obj.save(update_fields=['analysis_status', 'sound_csv_path', 'avg_loudness', 'p90_loudness', 'p95_loudness', 'max_loudness'])
 
     except Exception as e_main_thread:
          print(log_prefix + f"ERROR in main analysis thread function: {e_main_thread}")
          traceback.print_exc()
          try:
-             if stream_obj: # Prüfe ob stream_obj existiert
+             if stream_obj:
                  stream_obj.refresh_from_db()
                  stream_obj.analysis_status = 'ERROR'
                  stream_obj.save(update_fields=['analysis_status'])
@@ -294,4 +305,3 @@ def run_analysis_and_extraction_thread(video_path, stream_id, user_name):
         end_time_thread = time.time()
         duration_str = time.strftime('%H:%M:%S', time.gmtime(end_time_thread - start_time_thread))
         print(f"{log_prefix}--- Thread finished for Stream ID: {stream_id} (Duration: {duration_str}) ---\n")
-        # CSV wird jetzt NICHT mehr automatisch gelöscht, da sie für Re-Generate gebraucht wird
