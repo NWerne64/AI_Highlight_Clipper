@@ -7,7 +7,7 @@ Pillow>=9.0  # Wichtig für FileField
 librosa>=0.8
 numpy
 pandas
-moviepy>=1.0.3
+moviepy==1.0.3
 
 # Optional, falls noch genutzt (wahrscheinlich nicht mehr)
 # twitch-python
