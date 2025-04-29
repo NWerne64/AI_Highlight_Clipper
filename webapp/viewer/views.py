@@ -297,4 +297,5 @@ def regenerate_highlights_view(request, stream_id):
          messages.error(request, "Fehler bei der Neugenerierung der Highlights.")
 
     return redirect('generator', stream_id=stream_id)
+
     #test
