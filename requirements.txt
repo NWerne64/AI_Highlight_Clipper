@@ -1,15 +1,17 @@
 # AI_Highlight_Clipper/requirements.txt
 
 django>=3.2  # Oder deine Version
-Pillow>=9.0  # Wichtig für FileField
+Pillow>=9.0
 
 # Für die Lautstärke-Analyse
 librosa>=0.8
 numpy
 pandas
-moviepy==1.0.3
+moviepy==1.0.3 # Behalte Version 1.0.3 bei!
 
-# Optional, falls noch genutzt (wahrscheinlich nicht mehr)
-# twitch-python
-# rx
-# requests
+# NEU für Twitch Recorder
+requests>=2.19.0
+streamlink
+
+# Stelle sicher, dass andere nötige Pakete auch drin sind
+python-dotenv

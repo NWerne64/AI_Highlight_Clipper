@@ -125,3 +125,22 @@ import os # Sicherstellen, dass os importiert ist
 
 MEDIA_URL = '/media/'
 MEDIA_ROOT = os.path.join(BASE_DIR, 'webapp/media') # Speichert Dateien im Projektordner/media/
+
+
+
+
+# ... (andere Settings wie MEDIA_URL, MEDIA_ROOT bleiben) ...
+
+# Twitch API Credentials (AUS SICHERHEITSGRÜNDEN aus Umgebungsvariablen laden!)
+# Setze diese Variablen in deinem System oder in einer .env Datei (mit python-dotenv)
+TWITCH_CLIENT_ID = os.environ.get('TWITCH_CLIENT_ID', 'DEINE_CLIENT_ID_HIER') # Ersetze durch deine ID oder lade aus Env.
+TWITCH_CLIENT_SECRET = os.environ.get('TWITCH_CLIENT_SECRET', 'DEIN_CLIENT_SECRET_HIER') # Ersetze oder lade aus Env.
+
+# Prüfe, ob die Keys vorhanden sind (optional, aber gut für Debugging)
+if not TWITCH_CLIENT_ID or 'DEINE_CLIENT_ID' in TWITCH_CLIENT_ID:
+    print("WARNUNG: TWITCH_CLIENT_ID nicht korrekt in settings.py oder Umgebungsvariablen gesetzt!")
+if not TWITCH_CLIENT_SECRET or 'DEIN_CLIENT_SECRET' in TWITCH_CLIENT_SECRET:
+    print("WARNUNG: TWITCH_CLIENT_SECRET nicht korrekt in settings.py oder Umgebungsvariablen gesetzt!")
+
+# Optional: Pfad zum angepassten Recorder-Skript
+TWITCH_RECORDER_SCRIPT = os.path.join(BASE_DIR, 'scripts', 'background_recorder.py') # Pfad zum neuen Skript
