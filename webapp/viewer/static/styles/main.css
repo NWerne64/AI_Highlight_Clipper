@@ -220,7 +220,6 @@ main form#upload-form button[type="submit"]:hover {
 }
 
 
-/* Video Übersicht */
 .video_lines {
     display: block;
     width: auto;
@@ -230,127 +229,80 @@ main form#upload-form button[type="submit"]:hover {
 .line {
    display: flex;
    flex-wrap: wrap;
-   /* Korrigierter Wert: Verteilt Platz */
-   justify-content: space-between;
-   gap: 20px; /* Abstand zwischen den 'stream-entry' Containern */
+   /* justify-content: space-between; */ /* Oder space-around, oder flex-start */
+   justify-content: flex-start; /* Startet links */
+   gap: 20px; /* Abstand zwischen den stream-entry Blöcken */
    margin-bottom: 20px;
 }
 
-/* Wrapper für ein einzelnes Stream-Element (wird nicht mehr gebraucht, wenn .video direkt in .line) */
-/* .stream-entry { ... } */
-
-/* Video-Container ANPASSEN für Hover-Effekt */
-.video { /* video-hover-container Klasse ist optional */
-    display: block;
-    flex: 1 1 280px; /* Responsive Breite */
+/* NEU: Wrapper für ein Stream-Element (Video + Stop-Button) */
+.stream-entry {
+    flex: 1 1 280px; /* Nimmt Platz im Flex-Layout der .line ein */
     max-width: 300px;
-    aspect-ratio: 16 / 9; /* Seitenverhältnis */
+    text-align: center; /* Zentriert den Stop-Button darunter */
+    margin-bottom: 15px; /* Gesamtabstand des Eintrags nach unten */
+}
+
+/* Video-Container ANPASSEN */
+.video { /* video-hover-container Klasse ist optional */
+    display: block; /* Nimmt volle Breite von stream-entry ein */
+    width: 100%; /* Nimmt volle Breite von stream-entry ein */
+    aspect-ratio: 16 / 9;
     background-color: rgba(0, 0, 0, .7);
     border-radius: 8px;
-    overflow: hidden; /* Wichtig für Overlays */
-    position: relative; /* WICHTIG für absolute Positionierung */
-    cursor: default; /* Standard Mauszeiger, da der Link innen ist */
+    overflow: hidden;
+    position: relative; /* WICHTIG für Overlays */
+    cursor: default;
     transition: transform 0.2s ease-in-out;
-    margin-bottom: 10px; /* Beibehaltung des unteren Abstands */
+    /* margin-bottom NICHT hier, wird von stream-entry gesteuert */
 }
 
 .video:hover {
     transform: scale(1.03);
 }
 
-/* Optional: Hintergrundbild */
+/* Optional: Hintergrundbild für Video-Container */
 .video-background-image {
     position: absolute; top: 0; left: 0; width: 100%; height: 100%;
     object-fit: cover; z-index: 1; opacity: 0.5;
 }
 
-/* Gemeinsame Stile für Overlay-Buttons/Formulare */
+/* --- Regeln für Hover-Buttons (Play/Delete) --- */
 .video-overlay-button {
-    position: absolute;
-    top: 50%;
-    transform: translateY(-50%);
-    background-color: rgba(0, 0, 0, 0.6);
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    border: none;
-    cursor: pointer;
-    z-index: 2;
-    opacity: 0;
-    visibility: hidden;
+    position: absolute; top: 50%; transform: translateY(-50%);
+    background-color: rgba(0, 0, 0, 0.6); border-radius: 50%; display: flex;
+    align-items: center; justify-content: center; border: none;
+    cursor: pointer; z-index: 2; opacity: 0; visibility: hidden;
     transition: opacity 0.2s ease-in-out, visibility 0s linear 0.2s;
 }
-
-/* Play-Button (Link) */
-.play-button {
-    left: 15px; /* Position links */
-    width: 50px;
-    height: 50px;
-    padding: 10px;
-}
-.play-button img { /* Icon im Play Button */
-    height: 25px;
-    width: auto;
-    display: block;
-}
-.play-button:hover {
-     background-color: rgba(0, 123, 255, 0.8); /* Blauer Hover */
-}
-
-/* Delete-Formular */
-.delete-form {
-    right: 15px; /* Position rechts */
-    width: 45px;
-    height: 45px;
-    background-color: rgba(200, 0, 0, 0.6); /* Rötlich */
-    padding: 0;
-}
-/* Button innerhalb des Delete-Formulars */
-.delete-button-overlay {
-    background: none;
-    border: none;
-    padding: 0;
-    margin: 0;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    width: 100%;
-    height: 100%;
-    cursor: pointer;
-}
-.delete-button-overlay img { /* Delete Icon */
-    height: 18px;
-    width: auto;
-    filter: brightness(0) invert(1); /* Macht Icon weiß */
-}
-.delete-form:hover {
-    background-color: rgba(255, 0, 0, 0.8); /* Helleres Rot im Hover */
-}
-
-/* Zeigt die Buttons beim Hover über .video an */
-.video:hover .video-overlay-button {
-    opacity: 1;
-    visibility: visible;
-    transition: opacity 0.2s ease-in-out;
-}
+.play-button { left: 15px; width: 50px; height: 50px; padding: 10px; }
+.play-button img { height: 25px; width: auto; display: block; }
+.play-button:hover { background-color: rgba(0, 123, 255, 0.8); }
+.delete-form { right: 15px; width: 45px; height: 45px; background-color: rgba(200, 0, 0, 0.6); padding: 0; }
+.delete-button-overlay { background: none; border: none; padding: 0; margin: 0; display: flex; align-items: center; justify-content: center; width: 100%; height: 100%; cursor: pointer; }
+.delete-button-overlay img { height: 18px; width: auto; filter: brightness(0) invert(1); }
+.delete-form:hover { background-color: rgba(255, 0, 0, 0.8); }
+.video:hover .video-overlay-button { opacity: 1; visibility: visible; transition: opacity 0.2s ease-in-out; }
+/* --- Ende Hover-Buttons --- */
 
 /* Video-Titel unten */
 .text_video {
-    position: absolute;
-    bottom: 0px;
-    left: 0;
-    right: 0;
-    color: #FFF;
-    font-size: 13px;
+    position: absolute; bottom: 0px; left: 0; right: 0; color: #FFF; font-size: 13px;
     background: linear-gradient(to top, rgba(0,0,0,0.9) 0%, rgba(0,0,0,0) 100%);
-    padding: 20px 10px 8px 10px;
-    text-align: center;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    z-index: 1; /* Hinter den Buttons */
+    padding: 20px 10px 8px 10px; text-align: center; white-space: nowrap;
+    overflow: hidden; text-overflow: ellipsis; z-index: 1;
 }
+
+/* Styling für Stop-Button unterhalb des Videos */
+.stop-recording-button {
+    background-color: #ffc107; color: #333; border: none;
+    padding: 4px 10px; border-radius: 4px; cursor: pointer;
+    font-size: 0.85em; /* Etwas größer */
+    margin-top: 8px; /* Abstand zum Video-Block */
+    display: inline-block; font-weight: bold;
+    transition: background-color 0.2s;
+}
+.stop-recording-button:hover { background-color: #e0a800; }
 
 
 /* Footer */
@@ -552,3 +504,20 @@ main form#upload-form button[type="submit"]:hover {
 .logout-button { display: block; width: 100%; background: none; border: none; padding: 6px 15px; margin: 0; color: #f0f0f0; font-family: inherit; font-size: 14px; text-align: left; cursor: pointer; white-space: nowrap; transition: background-color 0.2s, color 0.2s; }
 .logout-button:hover { background-color: #007bff; color: white; }
 
+/* Styling für Stop-Button unterhalb des Videos */
+.stop-recording-button {
+    background-color: #ffc107; /* Gelb/Orange */
+    color: #333; /* Dunkler Text */
+    border: none;
+    padding: 4px 10px; /* Etwas größer */
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.85em; /* Kleinere Schrift */
+    margin-top: 8px; /* Abstand zum Video */
+    display: inline-block;
+    font-weight: bold;
+    transition: background-color 0.2s;
+}
+.stop-recording-button:hover {
+    background-color: #e0a800; /* Dunkleres Gelb/Orange */
+}

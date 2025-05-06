@@ -1,4 +1,3 @@
-#video_player.html
 <!DOCTYPE html>
 {% load static %}
 <html lang="en">
@@ -9,34 +8,11 @@
     <link rel="stylesheet" type="text/css" href="{% static 'styles/main.css' %}">
     <title>Video Player - {{ stream.stream_name|default:"Video" }}</title>
     <style>
-        /* Stile bleiben hier unverändert */
-        .video-container {
-            max-width: 900px;
-            margin: 30px auto;
-            background-color: rgba(0,0,0,0.2);
-            padding: 20px;
-            border-radius: 8px;
-            text-align: center;
-        }
-        .video-container video {
-            max-width: 100%;
-            height: auto;
-            border-radius: 4px;
-        }
-        .generator-button {
-            display: inline-block;
-            margin-top: 20px;
-            padding: 12px 25px;
-            background-color: #007bff; /* Blau */
-            color: white;
-            text-decoration: none;
-            border-radius: 5px;
-            font-weight: 500;
-            transition: background-color 0.2s;
-        }
-        .generator-button:hover {
-            background-color: #0056b3; /* Dunkleres Blau */
-        }
+        .video-container { max-width: 900px; margin: 30px auto; background-color: rgba(0,0,0,0.2); padding: 20px; border-radius: 8px; text-align: center; }
+        .video-container video { max-width: 100%; height: auto; border-radius: 4px; }
+        .generator-button { display: inline-block; margin-top: 20px; padding: 12px 25px; background-color: #007bff; color: white; text-decoration: none; border-radius: 5px; font-weight: 500; transition: background-color 0.2s; }
+        .generator-button:hover { background-color: #0056b3; }
+        .error-message { color: orange; margin-top: 15px; }
     </style>
 </head>
 <body>
@@ -47,17 +23,10 @@
         <div class="header_elements">
              <a href='/' style="text-decoration: none;  color: #FFFFFF;"><div class="Logo">Stream Clipper</div></a>
              <div class="user-menu">
-                <div class="user-info">
-                    {{ name }}<img class="user" src="{% static 'images/user.png' %}" alt="">
-                </div>
-                <div class="logout-popup">
-                    <div class="logout-popup">
-                        <form action="{% url 'logout' %}" method="post" style="margin: 0;"> {% csrf_token %}
-                            <button type="submit" class="logout-button">Logout</button> </form>
-                    </div>
-                </div>
+                <div class="user-info"> {{ name }}<img class="user" src="{% static 'images/user.png' %}" alt=""> </div>
+                <div class="logout-popup"> <form action="{% url 'logout' %}" method="post" style="margin: 0;"> {% csrf_token %} <button type="submit" class="logout-button">Logout</button> </form> </div>
              </div>
-             </div>
+        </div>
     </div>
 </header>
 
@@ -66,17 +35,23 @@
         <h2 style="text-align: center; margin-bottom: 20px;">{{ stream.stream_name|default:"Video ansehen" }}</h2>
 
         <div class="video-container">
-            {% if stream.video_file %}
+            {# Verwende die von der View konstruierte video_url #}
+            {% if video_url %}
                 <video controls preload="metadata">
-                    <source src="{{ stream.video_file.url }}" type="video/mp4">
-                    Dein Browser unterstützt das Video-Tag nicht.
+                    <source src="{{ video_url }}" type="video/mp4">
+                    Dein Browser unterstützt das Video-Tag nicht oder die Datei konnte nicht geladen werden.
                 </video>
             {% else %}
-                <p>Keine Videodatei für diesen Stream gefunden.</p>
+                <p class="error-message">Videodatei für diesen Stream nicht gefunden oder konnte nicht geladen werden.</p>
+                <p style="font-size: smaller; color: #aaa;">(Mögliche Ursachen: Aufnahme fehlgeschlagen, Datei manuell gelöscht, Pfadproblem)</p>
+                {% if stream.video_file.name %}
+                 <p style="font-size: smaller; color: #aaa;">Erwarteter Pfad (relativ): {{ stream.video_file.name }}</p>
+                {% endif %}
             {% endif %}
 
-            <br> <a href="{% url 'generator' stream_id=stream.id %}" class="generator-button">
-                Highlight Generator starten
+            <br>
+            <a href="{% url 'generator' stream_id=stream.id %}" class="generator-button">
+                Highlight Generator anzeigen/starten
             </a>
         </div>
          <div style="text-align: center; margin-top: 20px;">
@@ -84,6 +59,7 @@
          </div>
     </div>
 </main>
+
 </div>
 </body>
 </html>

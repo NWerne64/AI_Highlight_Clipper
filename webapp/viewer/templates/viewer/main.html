@@ -7,79 +7,103 @@
         <link href="https://fonts.googleapis.com/css?family=Lato:100,300,400,700,900" rel="stylesheet">
         <link rel="stylesheet" type="text/css" href="{% static 'styles/main.css' %}">
         <title>Main Page</title>
+        <style>
+            /* Styles für Nachrichten und Formulare (unverändert) */
+            #record-form { margin-top: 30px; background-color: rgba(100, 100, 255, 0.1); padding: 20px; border-radius: 8px; border: 1px solid #4a4e69; }
+            #record-form h2 { color: white; margin-bottom: 15px; }
+            #record-form label { display: block; margin-bottom: 5px; color: #eee; font-weight: bold;}
+            #record-form input[type="text"] { display: block; width: 100%; padding: 10px; margin-bottom: 15px; border: 1px solid #007bff; background-color: rgba(0, 0, 0, 0.2); color: white; border-radius: 4px; }
+            #record-form button[type="submit"] { padding: 10px 25px; font-weight: 500; border: none; border-radius: 5px; background-color: #6f42c1; color: white; cursor: pointer; transition: background-color 0.2s; margin-top: 15px; }
+            #record-form button[type="submit"]:hover { background-color: #5a32a3; }
+            #record-form p { font-size: smaller; color: #aaa; margin-top: 10px; }
+            #upload-form { background-color: rgba(255, 255, 255, 0.1); padding: 20px; border-radius: 8px; margin-bottom: 40px; border: 1px solid #6c757d; }
+            #upload-form h2 { color: white; margin-bottom: 15px; }
+            #upload-form label { display: block; margin-bottom: 5px; color: #eee; font-weight: bold;}
+            #upload-form input[type="text"], #upload-form input[type="file"] { display: block; width: 100%; padding: 10px; margin-bottom: 15px; border: 1px solid #007bff; background-color: rgba(0, 0, 0, 0.2); color: white; border-radius: 4px; }
+            #upload-form input[type="file"]::file-selector-button { background-color: #007bff; color: white; border: none; padding: 8px 12px; border-radius: 4px; cursor: pointer; margin-right: 10px; }
+            #upload-form input[type="file"]::file-selector-button:hover { background-color: #0056b3; }
+            #upload-form button[type="submit"] { padding: 10px 25px; font-weight: 500; border: none; border-radius: 5px; background-color: #007bff; color: white; cursor: pointer; transition: background-color 0.2s; }
+            #upload-form button[type="submit"]:hover { background-color: #0056b3; }
+            .messages { list-style: none; padding: 0; margin: 15px auto; max-width: 800px; text-align: center; }
+            .messages li { padding: 10px 15px; margin-bottom: 10px; border-radius: 4px; font-size: 0.95em; }
+            .messages li.success { background-color: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
+            .messages li.error { background-color: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
+            .messages li.info { background-color: #d1ecf1; color: #0c5460; border: 1px solid #bee5eb; }
+            .messages li.warning { background-color: #fff3cd; color: #856404; border: 1px solid #ffeeba; }
+
+            /* Styling für Stop-Button */
+            .stop-recording-button {
+                background-color: #ffc107; color: #333; border: none;
+                padding: 3px 8px; border-radius: 4px; cursor: pointer; font-size: 0.8em;
+                margin-top: 5px; /* Abstand zum Video */
+                display: inline-block; font-weight: bold;
+                transition: background-color 0.2s;
+            }
+            .stop-recording-button:hover { background-color: #e0a800; }
+
+            /* Container für Video UND optionalen Stop-Button */
+            .stream-entry {
+                /* Nimmt Platz im Flex-Layout der .line ein */
+                flex: 1 1 280px;
+                max-width: 300px;
+                text-align: center;
+                margin-bottom: 15px; /* Gesamtabstand des Eintrags nach unten */
+            }
+        </style>
     </head>
     <body>
 
 <div class="page">
 
-<header class="header">
-    <div class="container">
-        <div class="header_elements">
-             <a href='/' style="text-decoration: none;  color: #FFFFFF;"><div class="Logo">Stream Clipper</div></a>
-             <div class="user-menu">
-                <div class="user-info">
-                    {{ name }}<img class="user" src="{% static 'images/user.png' %}" alt="">
-                </div>
-                <div class="logout-popup">
-                    <form action="{% url 'logout' %}" method="post" style="margin: 0;"> {% csrf_token %}
-                        <button type="submit" class="logout-button">Logout</button> </form>
-                </div>
-             </div>
-             </div>
-    </div>
-</header>
+<header class="header"> <div class="container"> <div class="header_elements"> <a href='/' style="text-decoration: none; color: #FFFFFF;"><div class="Logo">Stream Clipper</div></a> <div class="user-menu"> <div class="user-info"> {{ name }}<img class="user" src="{% static 'images/user.png' %}" alt=""> </div> <div class="logout-popup"> <form action="{% url 'logout' %}" method="post" style="margin: 0;"> {% csrf_token %} <button type="submit" class="logout-button">Logout</button> </form> </div> </div> </div> </div> </header>
 
 <main class="main">
     <div class="container">
-        {% if is_staff %}
-         <a href="{% url 'admin:index' %}" class="control_panel">Control Panel</a>
-        {% endif %}
+        {% if is_staff %} <a href="{% url 'admin:index' %}" class="control_panel">Control Panel</a> {% endif %}
+        {% if messages %} <ul class="messages"> {% for message in messages %} <li{% if message.tags %} class="{{ message.tags }}"{% endif %}>{{ message }}</li> {% endfor %} </ul> {% endif %}
 
         <form id="upload-form" method="post" enctype="multipart/form-data" action="{% url 'add_stream' %}">
-             <h2>Video hochladen</h2>
-            {% csrf_token %}
-            {{ upload_form.as_p }}
-            <button type="submit" class="search-btn" style="padding: 10px 25px; cursor: pointer;">Hochladen</button>
+             <h2>Video hochladen</h2> {% csrf_token %} {{ upload_form.as_p }}
+            <button type="submit" style="padding: 10px 25px; cursor: pointer;">Hochladen & Analysieren</button>
          </form>
-        <hr>
+
+        <hr style="margin: 40px 0;">
+
+        <form id="record-form" method="post" action="{% url 'record_stream' %}">
+            <h2>Twitch Stream aufnehmen</h2> {% csrf_token %}
+            <div> <label for="id_twitch_username">Twitch Kanalname:</label> <input type="text" id="id_twitch_username" name="twitch_username" required placeholder="z.B. trymacs"> </div>
+            <button type="submit">Aufnahme starten</button>
+            <p>(Startet Aufnahme im Hintergrund. Kann manuell gestoppt werden.)</p>
+        </form>
+
+        <hr style="margin-top: 40px;">
         <h2>Vorhandene Streams</h2>
 
         <div class="video_lines">
             {% for stream in stream_data %}
-                {% if forloop.counter0|modulo:3 == 0 %}
-                    <div class="line">
-                {% endif %}
+                {% if forloop.counter0|modulo:3 == 0 %} <div class="line"> {% endif %}
 
-                        <div class="video video-hover-container">
-                            <div class="video-background"></div>
+                        <div class="stream-entry">
+                            <div class="video video-hover-container">
+                                <div class="video-background"></div>
+                                <a href="{% url 'video_player' stream_id=stream.id %}" class="video-overlay-button play-button" title="Video ansehen"><img src="{% static 'images/play.png' %}" alt="Play"></a>
+                                <form action="{% url 'delete_stream' stream_id=stream.id %}" method="post" class="video-overlay-button delete-form" onsubmit="return confirm('Stream \'{{ stream.stream_name|default:stream.stream_link|escapejs }}\' und alle Daten löschen?');"> {% csrf_token %} <button type="submit" class="delete-button-overlay" title="Stream löschen"> <img src="{% static 'images/delete.png' %}" alt="Löschen"> </button> </form>
+                                <span class="text_video">{{ stream.stream_name|default:stream.stream_link }}</span>
+                            </div>
 
-                            <a href="{% url 'video_player' stream_id=stream.id %}" class="video-overlay-button play-button" title="Video ansehen">
-                                <img src="{% static 'images/play.png' %}" alt="Play">
-                            </a>
-
-                            <form action="{% url 'delete_stream' stream_id=stream.id %}" method="post" class="video-overlay-button delete-form" onsubmit="return confirm('Stream \'{{ stream.stream_name|default:stream.stream_link|escapejs }}\' und alle zugehörigen Daten wirklich löschen?');">
-                                {% csrf_token %}
-                                <button type="submit" class="delete-button-overlay" title="Stream löschen">
-                                    <img src="{% static 'images/delete.png' %}" alt="Löschen">
-                                </button>
-                            </form>
-
-                            <span class="text_video">{{ stream.stream_name|default:stream.stream_link }}</span>
-                        </div>
-
-                {% if forloop.counter|modulo:3 == 0 or forloop.last %}
-                    </div> {% endif %}
+                            {% if stream.analysis_status == 'RECORDING' and stream.recorder_pid %}
+                                <form action="{% url 'stop_recording' stream_id=stream.id %}" method="post">
+                                    {% csrf_token %}
+                                    <button type="submit" class="stop-recording-button" title="Laufende Aufnahme stoppen (PID: {{ stream.recorder_pid }})">Aufnahme Stoppen</button>
+                                </form>
+                            {% endif %}
+                        </div> {% if forloop.counter|modulo:3 == 0 or forloop.last %} </div> {% endif %}
              {% empty %}
-                 <p>Noch keine Streams vorhanden. Lade dein erstes Video hoch!</p>
+                 <p>Noch keine Streams vorhanden.</p>
             {% endfor %}
-
-        </div> </div> </main>
-
-<footer class="footer">
-    <div class="container">
-        <div class="copyright">Copyright ©</div>
+        </div>
     </div>
-</footer>
+</main>
 
-</div> </body>
-</html>
+<footer class="footer"> <div class="container"> <div class="copyright">Copyright ©</div> </div> </footer>
+</div>
