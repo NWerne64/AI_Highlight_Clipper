@@ -58,6 +58,7 @@ class StreamHighlight(models.Model):
     clip_link = models.CharField(max_length=500) # Relativer Pfad von MEDIA_ROOT
     # NEUES FELD für die Sortierung von Highlights
     start_time = models.FloatField(null=True, blank=True) # Startzeit des Clips in Sekunden vom Videoanfang
+    reason = models.CharField(max_length=255, blank=True, null=True)
 
     def __str__(self):
          return f"Highlight for '{self.stream_link}' (User: {self.user_id}) - Clip: {self.clip_link} (Start: {self.start_time or 'N/A'}s)"

@@ -38,7 +38,7 @@
         <div class="top_elements">
          <div class="heading">{{ stream.stream_name }}</div>
         <div class="btn"><a href="#" class="stop_btn">Stop generation</a></div>
-         <div class="download"><a class="download_btn" href="{% url 'delete_stream' user_name=name stream_link=stream.stream_link %}"><img class="download_img" src="{% static 'images/delete.png' %}"></a></div>
+                  <div class="download"><a class="download_btn" href="{% url 'delete_stream' stream_id=stream.id %}"><img class="download_img" src="{% static 'images/delete.png' %}"></a></div>
           </div>
     </div>
     </main>

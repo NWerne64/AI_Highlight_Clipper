@@ -22,10 +22,12 @@ import uuid
 import shutil
 import signal
 import time
+import pandas as pd
+import time
 
 from .models import Stream, StreamHighlight
 from .forms import StreamUploadForm
-from .analysis import run_analysis_and_extraction_thread, find_highlights_by_loudness, LOUDNESS_THRESHOLD
+from .analysis import SoundDetector
 from . import twitch_api_client
 
 
@@ -80,148 +82,158 @@ def add_stream(request):
     if request.method == 'POST':
         form = StreamUploadForm(request.POST, request.FILES)
         if form.is_valid():
-            uploaded_file = request.FILES.get('video_file')
-            if not uploaded_file:
+            if not request.FILES.get('video_file'):
                 messages.error(request, "Bitte Videodatei auswählen.")
-                stream_data = Stream.objects.filter(user_id=request.user.username).order_by('-id')
-                twitch_vods_session = request.session.get('twitch_vods_context', None)
-                searched_channel_name_session = request.session.get('searched_channel_name_context', None)
-                search_attempted_session = request.session.get('search_attempted_context', False)
-                response_data = {
-                    "stream_data": stream_data, "name": request.user.username,
-                    "is_staff": request.user.is_staff, "upload_form": form,
-                    "twitch_vods": twitch_vods_session,
-                    "searched_channel_name": searched_channel_name_session,
-                    "search_attempted": search_attempted_session,
-                }
-                return render(request, 'viewer/main.html', response_data)
+                return render(request, 'viewer/main.html', {'upload_form': form})
 
-            print("Upload Form valid & file present...")
-            new_stream = Stream(
-                user_id=request.user.username,
-                stream_name=form.cleaned_data.get('stream_name') or os.path.splitext(uploaded_file.name)[0],
-                analysis_status='PENDING'
-            )
-            new_stream.stream_link = new_stream.stream_name
-            new_stream.save()
-            print(f"Initial Stream object created. Stream ID: {new_stream.id}")
+            new_stream = form.save(commit=False)
+            new_stream.user_id = request.user.username
 
-            video_full_path = None
-            final_relative_path = None
-            original_extension = os.path.splitext(uploaded_file.name)[1].lower()
-            if not original_extension: original_extension = ".mp4"
+            if not new_stream.stream_name:
+                new_stream.stream_name = os.path.splitext(new_stream.video_file.name)[0]
 
+            new_stream.analysis_status = 'PENDING'
+            new_stream.save()  # Save file to disk
+
+            print(f"📁 Stream gespeichert: {new_stream.video_file.name}, ID: {new_stream.id}")
+
+            # --- Zielverzeichnis erstellen ---
+            stream_id = new_stream.id
+            user_id = request.user.username
+            relative_dir = os.path.join('uploads', user_id, str(stream_id))
+            absolute_dir = os.path.join(settings.MEDIA_ROOT, relative_dir)
+            os.makedirs(absolute_dir, exist_ok=True)
+
+            # --- Datei verschieben/kopieren ---
+            video_dest = os.path.join(absolute_dir, f"{stream_id}.mp4")
             try:
-                user_id_part = str(new_stream.user_id)
-                stream_id_part = str(new_stream.id)
-                standardized_filename = f"{new_stream.id}{original_extension}"
-
-                final_relative_path = os.path.join('uploads', user_id_part, stream_id_part,
-                                                   standardized_filename).replace('\\', '/')
-                absolute_target_dir = os.path.join(settings.MEDIA_ROOT, 'uploads', user_id_part, stream_id_part)
-                os.makedirs(absolute_target_dir, exist_ok=True)
-                video_full_path = os.path.join(absolute_target_dir, standardized_filename)
-                print(f"Standardized target path for upload: {video_full_path}")
-
-                with open(video_full_path, 'wb+') as destination:
-                    for chunk in uploaded_file.chunks():
-                        destination.write(chunk)
-                print(f"Uploaded file saved to: {video_full_path}")
-
-                ffmpeg_path = getattr(settings, 'FFMPEG_PATH', 'ffmpeg')
-                repacked_video_path = video_full_path + ".repacked_upload" + original_extension  # Eindeutiger temporärer Name
-                ffmpeg_repack_cmd = [
-                    ffmpeg_path, '-i', video_full_path,
-                    '-c', 'copy', '-movflags', '+faststart', repacked_video_path
-                ]
-                print(f"[Upload PostProcess] Executing ffmpeg repack: {' '.join(ffmpeg_repack_cmd)}")
-                repack_popen_process = None
-                try:
-                    repack_popen_process = subprocess.Popen(ffmpeg_repack_cmd, stdout=subprocess.PIPE,
-                                                            stderr=subprocess.PIPE, text=True, encoding='utf-8')
-                    stdout_repack, stderr_repack = repack_popen_process.communicate(
-                        timeout=getattr(settings, 'FFMPEG_REPACK_TIMEOUT', 600))
-
-                    if repack_popen_process.returncode == 0:
-                        print(f"[Upload PostProcess] Successfully repacked to {repacked_video_path}.")
-                        shutil.move(repacked_video_path, video_full_path)  # Überschreibt Original
-                        print(f"[Upload PostProcess] Original replaced with repacked: {video_full_path}")
-                    else:
-                        print(f"[Upload PostProcess] ffmpeg repack FAILED. RC: {repack_popen_process.returncode}")
-                        if stdout_repack: print(f"  Repack stdout:\n{stdout_repack.strip()}")
-                        if stderr_repack: print(f"  Repack stderr:\n{stderr_repack.strip()}")
-                        print(
-                            f"[Upload PostProcess] WARNING: Repack failed, using original. Playback might be affected.")
-                        if os.path.exists(repacked_video_path): os.remove(repacked_video_path)
-                except subprocess.TimeoutExpired:
-                    print(f"[Upload PostProcess] ffmpeg repack TIMEOUT.")
-                    if repack_popen_process and repack_popen_process.poll() is None: repack_popen_process.kill(); repack_popen_process.communicate()
-                    if os.path.exists(repacked_video_path): os.remove(repacked_video_path)
-                    print(f"[Upload PostProcess] WARNING: Repack timeout, using original. Playback might be affected.")
-                except Exception as e_repack_upload:
-                    print(f"[Upload PostProcess] ERROR during repack: {e_repack_upload}");
-                    traceback.print_exc()
-                    if os.path.exists(repacked_video_path): os.remove(
-                        repacked_video_path)  # Temp-Datei sicherheitshalber löschen
-                    print(f"[Upload PostProcess] WARNING: Repack error, using original. Playback might be affected.")
-
-                new_stream.video_file.name = final_relative_path
-                new_stream.save(update_fields=['video_file', 'stream_link', 'stream_name'])
-                print(f"Stream object updated with final video_file path: {new_stream.video_file.name}")
-
-            except Exception as e_path_move:
-                print(f"ERROR processing/moving uploaded file for Stream ID {new_stream.id}: {e_path_move}")
-                traceback.print_exc()
+                shutil.move(new_stream.video_file.path, video_dest)
+                new_stream.video_file.name = os.path.join(relative_dir, f"{stream_id}.mp4").replace('\\', '/')
+                new_stream.save(update_fields=['video_file'])
+                print(f"📦 Video verschoben nach: {video_dest}")
+            except Exception as e:
+                print(f"❌ Fehler beim Verschieben: {e}")
                 new_stream.analysis_status = 'ERROR'
                 new_stream.save(update_fields=['analysis_status'])
-                messages.error(request, "Fehler bei der Verarbeitung der hochgeladenen Datei.")
+                messages.error(request, "Fehler beim Verschieben der Videodatei.")
                 return redirect('index')
 
-            if new_stream.analysis_status == 'PENDING' and video_full_path:
-                try:
-                    user_name_for_thread = request.user.username
-                    print(
-                        f"Starting analysis thread for uploaded Stream ID: {new_stream.id} and Video: {video_full_path}")
-                    analysis_thread = threading.Thread(target=run_analysis_and_extraction_thread, args=(
-                        video_full_path, new_stream.id, user_name_for_thread), daemon=True)
-                    analysis_thread.start()
-                    print(f"Analysis thread started for upload. View is returning.")
-                    messages.success(request,
-                                     f"Video '{new_stream.stream_name}' hochgeladen und optimiert. Analyse gestartet.")
-                except Exception as e_thread:
-                    print(f"ERROR starting analysis thread for upload: {e_thread}");
-                    traceback.print_exc()
-                    new_stream.analysis_status = 'ERROR';
-                    new_stream.save(update_fields=['analysis_status'])
-                    messages.error(request, "Video hochgeladen, aber Fehler beim Starten der Analyse.")
-            else:  # Fehler beim Speichern/Repacken oder Status schon ERROR
-                if new_stream.analysis_status != 'ERROR':
-                    new_stream.analysis_status = 'ERROR';
-                    new_stream.save(update_fields=['analysis_status'])
-                # Die Nachricht sollte spezifischer sein, je nachdem, wo der Fehler auftrat.
-                # Aber für den Nutzer reicht eine allgemeine Meldung.
-                messages.error(request,
-                               "Fehler: Videodatei hochgeladen, aber die Verarbeitung schlug fehl. Analyse nicht gestartet.")
+            messages.success(request, "Video hochgeladen. Highlights können jetzt generiert werden.")
             return redirect('index')
-        else:  # Form invalid
-            stream_data = Stream.objects.filter(user_id=request.user.username).order_by('-id')
-            twitch_vods_session = request.session.get('twitch_vods_context', None)
-            searched_channel_name_session = request.session.get('searched_channel_name_context', None)
-            search_attempted_session = request.session.get('search_attempted_context', False)
-            response_data = {
-                "stream_data": stream_data, "name": request.user.username,
-                "is_staff": request.user.is_staff, "upload_form": form,
-                "twitch_vods": twitch_vods_session,
-                "searched_channel_name": searched_channel_name_session,
-                "search_attempted": search_attempted_session,
-            }
-            error_list = []
-            for field, errors_list in form.errors.items(): error_list.append(f"{field}: {'; '.join(errors_list)}")
-            error_message = "Fehler beim Hochladen: " + " | ".join(error_list)
-            messages.error(request, error_message)
-            return render(request, 'viewer/main.html', response_data)
-    else:  # Not POST
+        else:
+            messages.error(request, "Fehler beim Hochladen des Videos.")
+            return render(request, 'viewer/main.html', {'upload_form': form})
+    else:
         return redirect('index')
+
+
+@login_required
+@require_POST
+def generate_highlights_view(request, stream_id):
+    stream = get_object_or_404(Stream, id=stream_id, user_id=request.user.username)
+    user_name = request.user.username
+
+    try:
+        video_path = stream.video_file.path
+        stream_dir = os.path.dirname(video_path)
+        sound_csv_path = os.path.join(stream_dir, f"{stream_id}_sound.csv")
+
+        labels_list = ['Laughter', 'Cheering', 'Gunshot', 'Music', 'Speech', 'Dog', 'Crowd',
+                       'Explosion', 'Applause', 'Scream', 'Laugh', 'Shout', 'Car', 'Siren']
+        columns = ['start_time', 'end_time', 'sound_loudness'] + labels_list
+        empty_df = pd.DataFrame({col: [] for col in columns})
+        empty_df = empty_df.astype({col: 'float' for col in columns[2:]})
+
+        if not os.path.exists(sound_csv_path):
+            print(f"🎧 Starte SoundDetector für: {video_path}")
+            detector = SoundDetector(
+                channel_name=user_name,
+                stream_features=empty_df,
+                stream_dataframe_name=str(stream_id),
+                video_path=video_path
+            )
+            detector.start()
+
+            for _ in range(60):
+                if os.path.exists(sound_csv_path):
+                    break
+                time.sleep(1)
+
+        if not os.path.exists(sound_csv_path):
+            messages.error(request, "Analyse fehlgeschlagen – keine CSV gefunden.")
+            return redirect('stream', stream_id=stream_id)
+
+        df = pd.read_csv(sound_csv_path)
+        df['highlight_score'] = (
+            df['sound_loudness'] * 1.5 +
+            df['Laughter'] * 3 +
+            df['Gunshot'] * 4 +
+            df['Explosion'] * 2 +
+            df['Scream'] * 2 +
+            df['Applause'] * 1.5 +
+            df['Cheering'] * 1.5
+        )
+        top_clips = df.sort_values(by='highlight_score', ascending=False).head(3)
+
+        # === Gründe berechnen ===
+        label_de = {
+            'Laughter': 'Lachen', 'Cheering': 'Jubel', 'Gunshot': 'Schuss', 'Music': 'Musik',
+            'Speech': 'Sprache', 'Dog': 'Hund', 'Crowd': 'Menschenmenge', 'Explosion': 'Explosion',
+            'Applause': 'Applaus', 'Scream': 'Schrei', 'Laugh': 'Lachen', 'Shout': 'Rufen',
+            'Car': 'Auto', 'Siren': 'Sirene'
+        }
+
+        def extract_reason(row, threshold=0.2):
+            return ", ".join([label_de[col] for col in labels_list if getattr(row, col) > threshold]) or "Allgemeine Lautstärke"
+
+        top_clips['reason'] = top_clips.apply(extract_reason, axis=1)
+
+        # === Highlights-Ordner vorbereiten ===
+        media_relative_dir = os.path.join('uploads', user_name, str(stream_id), 'highlights')
+        media_full_dir = os.path.join(settings.MEDIA_ROOT, media_relative_dir)
+        os.makedirs(media_full_dir, exist_ok=True)
+
+        StreamHighlight.objects.filter(user_id=user_name, stream_link=stream.stream_link).delete()
+
+        def sec_to_ts(sec):
+            return time.strftime('%H:%M:%S', time.gmtime(sec)) + '.0'
+
+        reasons_summary = []
+
+        for idx, row in enumerate(top_clips.itertuples()):
+            start_ts = sec_to_ts(row.start_time)
+            duration = str(row.end_time - row.start_time)
+
+            clip_filename = f"highlight_{idx + 1}.mp4"
+            clip_path = os.path.join(media_full_dir, clip_filename)
+
+            subprocess.run([
+                "ffmpeg", "-ss", start_ts, "-i", video_path,
+                "-t", duration, "-c:v", "copy", "-c:a", "copy",
+                clip_path, "-y"
+            ], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+
+            StreamHighlight.objects.create(
+                user_id=user_name,
+                stream_link=stream.stream_link,
+                clip_link=os.path.join(media_relative_dir, clip_filename).replace('\\', '/'),
+                reason=row.reason
+            )
+
+            # Grund merken
+            reasons_summary.append(f"{clip_filename}: {row.reason}")
+            print(f"📌 Highlight {clip_filename} → Grund: {row.reason}")
+
+        messages.success(request, f"{len(top_clips)} Highlights wurden erfolgreich generiert.")
+        for reason in reasons_summary:
+            messages.info(request, reason)
+
+    except Exception as e:
+        print("❌ Fehler bei Highlight-Generierung:", e)
+        traceback.print_exc()
+        messages.error(request, "Fehler bei der Highlight-Generierung.")
+
+    return HttpResponseRedirect(request.META.get('HTTP_REFERER', reverse('stream', args=[stream_id])))
 
 
 # --- TWITCH STREAM AUFNAHME STARTEN ---
@@ -485,26 +497,11 @@ def stop_recording_view(request, stream_id):
                 messages.error(request, f"Fehler beim Prüfen der Videodatei.")
 
             if video_file_valid:
-                # ANNAHME: background_recorder.py hat die FFmpeg-Optimierung durchgeführt.
-                # Wenn nicht, wäre hier ein Ort für einen erneuten Versuch, ist aber komplexer.
-                final_status_for_stream = 'PENDING'
-                print(log_prefix + f"Status wird auf '{final_status_for_stream}' gesetzt für Analyse.")
-                try:
-                    print(
-                        log_prefix + f"Starting analysis for recorded Stream ID: {stream_id}, Video: {video_full_path}")
-                    analysis_thread = threading.Thread(target=run_analysis_and_extraction_thread,
-                                                       args=(video_full_path, stream_id, request.user.username),
-                                                       daemon=True)
-                    analysis_thread.start()
-                    print(log_prefix + "Analysis thread started.");
-                    if not messages.get_messages(request): messages.success(request,
-                                                                            f"Aufnahme beendet. Analyse gestartet.")
-                    analysis_started = True
-                except Exception as e_thread_start:
-                    print(log_prefix + f"ERROR starting analysis: {e_thread_start}");
-                    traceback.print_exc();
-                    final_status_for_stream = 'ERROR';
-                    messages.error(request, f"Aufnahme beendet, Fehler bei Analyse-Start.")
+                final_status_for_stream = 'DOWNLOAD_COMPLETE'
+                print(
+                    log_prefix + f"Status wird auf '{final_status_for_stream}' gesetzt – Analyse wird NICHT automatisch gestartet.")
+                messages.success(request, f"Aufnahme beendet. Video gespeichert.")
+
         else:
             print(log_prefix + "No video_file.name in DB. Cannot start analysis.");
             final_status_for_stream = 'ERROR_NO_FILE';
@@ -736,12 +733,16 @@ def generator_view(request, stream_id):
         traceback.print_exc()
         error_message_highlights = "Unerwarteter Fehler beim Laden der Highlights."
 
-    current_form_threshold = LOUDNESS_THRESHOLD
+    current_form_threshold = None
     if stream_obj.p95_loudness is not None and stream_obj.p95_loudness > 0:
         current_form_threshold = stream_obj.p95_loudness
     elif stream_obj.p90_loudness is not None and stream_obj.p90_loudness > 0:
         current_form_threshold = stream_obj.p90_loudness
-    current_form_threshold = max(0.001, current_form_threshold)
+
+    if current_form_threshold is not None:
+        current_form_threshold = max(0.001, current_form_threshold)
+    else:
+        current_form_threshold = 0.01  # Fallback, z. B. 0.01 oder leer lassen
 
     context = {'stream': stream_obj, 'name': request.user.username, 'is_staff': request.user.is_staff,
                'clips_data': clips_data, 'current_threshold': f"{current_form_threshold:.4f}",
@@ -753,57 +754,9 @@ def generator_view(request, stream_id):
 @login_required
 @require_POST
 def regenerate_highlights_view(request, stream_id):
-    stream_obj = get_object_or_404(Stream, id=stream_id, user_id=request.user.username)
-    log_prefix = f"[Regenerate Highlights Stream {stream_id}] "
-    print(f"{log_prefix}--- POST request to regenerate ---")
-    new_threshold_str = request.POST.get('new_threshold')
-    new_threshold = None
-    try:
-        new_threshold = float(new_threshold_str)
-        if not (0.00001 < new_threshold < 100.0): raise ValueError("Threshold out of range.")
-        print(f"{log_prefix}Using threshold: {new_threshold}")
-    except (ValueError, TypeError) as e:
-        print(f"{log_prefix}ERROR: Invalid threshold: '{new_threshold_str}'. Error: {e}");
-        messages.error(request, f"Ungültiger Threshold: '{new_threshold_str}'.")
-        return redirect('generator', stream_id=stream_id)
-
-    sound_csv_full_path = None
-    if stream_obj.sound_csv_path:
-        potential_path = os.path.join(settings.MEDIA_ROOT, stream_obj.sound_csv_path)
-        if os.path.exists(potential_path):
-            sound_csv_full_path = potential_path; print(f"{log_prefix}Found CSV: {sound_csv_full_path}")
-        else:
-            print(f"{log_prefix}WARNING: CSV path '{stream_obj.sound_csv_path}' not found at '{potential_path}'.")
-    if not sound_csv_full_path:
-        messages.error(request, "Analyse-Daten (CSV) nicht gefunden.");
-        return redirect('generator', stream_id=stream_id)
-
-    video_full_path = None
-    if stream_obj.video_file and stream_obj.video_file.name:
-        try:
-            video_full_path = os.path.join(settings.MEDIA_ROOT, stream_obj.video_file.name)
-        except Exception as e_vid_path:
-            print(f"{log_prefix}Error getting video path: {e_vid_path}")
-    if not video_full_path or not os.path.exists(video_full_path):
-        messages.error(request, "Originalvideo nicht gefunden.");
-        return redirect('generator', stream_id=stream_id)
-    print(f"{log_prefix}Found video for regeneration: {video_full_path}")
-
-    print(
-        f"{log_prefix}Regenerating clips with threshold {new_threshold} for video: {video_full_path}, CSV: {sound_csv_full_path}")
-    try:
-        find_highlights_by_loudness(
-            sound_csv_path=sound_csv_full_path, video_path=video_full_path,
-            stream_id=stream_id, user_name=request.user.username,
-            stream_link_override=stream_obj.stream_link, threshold=new_threshold
-        )
-        messages.success(request, f"Highlights mit Threshold {new_threshold:.4f} neu generiert.")
-        print(f"{log_prefix}--- Finished regenerating highlights ---")
-    except Exception as e_regen:
-        print(f"{log_prefix}ERROR during regeneration: {e_regen}");
-        traceback.print_exc()
-        messages.error(request, "Fehler bei Neugenerierung der Highlights.")
+    messages.warning(request, "Neugenerierung von Highlights ist deaktiviert.")
     return redirect('generator', stream_id=stream_id)
+
 
 
 # --- NEUE VIEWS FÜR TWITCH VOD IMPORT ---
@@ -993,8 +946,7 @@ def run_vod_download_and_analysis_thread(vod_url, target_video_path, stream_id, 
         download_successful = False
 
     if download_successful:
-        print(log_prefix + f"Download/repack complete. Starting analysis for: {target_video_path}")
-        run_analysis_and_extraction_thread(target_video_path, stream_id, user_name)
+        print(log_prefix + f"Download/repack complete. No analysis started (manual processing expected).")
     else:
         print(log_prefix + "Download failed/incomplete. Analysis skipped.")
 

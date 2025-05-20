@@ -13,6 +13,8 @@
         .generator-button { display: inline-block; margin-top: 20px; padding: 12px 25px; background-color: #007bff; color: white; text-decoration: none; border-radius: 5px; font-weight: 500; transition: background-color 0.2s; }
         .generator-button:hover { background-color: #0056b3; }
         .error-message { color: orange; margin-top: 15px; }
+        #status-message { margin-top: 15px; font-weight: bold; color: orange; }
+        #highlight-status p { margin-top: 15px; font-weight: bold; }
     </style>
 </head>
 <body>
@@ -24,7 +26,12 @@
              <a href='/' style="text-decoration: none;  color: #FFFFFF;"><div class="Logo">Stream Clipper</div></a>
              <div class="user-menu">
                 <div class="user-info"> {{ name }}<img class="user" src="{% static 'images/user.png' %}" alt=""> </div>
-                <div class="logout-popup"> <form action="{% url 'logout' %}" method="post" style="margin: 0;"> {% csrf_token %} <button type="submit" class="logout-button">Logout</button> </form> </div>
+                        <div class="logout-popup">
+                    <form action="{% url 'logout' %}" method="post" style="margin: 0;">
+                        {% csrf_token %}
+                        <button type="submit" class="logout-button">Logout</button>
+                    </form>
+                </div>
              </div>
         </div>
     </div>
@@ -49,16 +56,44 @@
                 {% endif %}
             {% endif %}
 
-            <br>
-            <a href="{% url 'generator' stream_id=stream.id %}" class="generator-button">
-                Highlight Generator anzeigen/starten
-            </a>
+            <div id="status-message"></div>
+
+            {% if messages %}
+                <div id="highlight-status">
+                    {% for message in messages %}
+                        <p style="color: {% if message.tags == 'error' %}red{% else %}green{% endif %};">
+                            {{ message }}
+                        </p>
+                    {% endfor %}
+                </div>
+            {% endif %}
+
+            <div style="margin-top: 20px;">
+                <form method="post" action="{% url 'generate_highlights' stream_id=stream.id %}" style="display: inline;" onsubmit="showGeneratingStatus();">
+                    {% csrf_token %}
+                    <button type="submit" class="generator-button">Highlights generieren</button>
+                </form>
+
+                <a href="{% url 'generator' stream_id=stream.id %}" class="generator-button" style="margin-left: 15px;">
+                    Highlights anzeigen
+                </a>
+            </div>
         </div>
-         <div style="text-align: center; margin-top: 20px;">
-             <a href="{% url 'index' %}">Zurück zur Übersicht</a>
-         </div>
+
+        <div style="text-align: center; margin-top: 20px;">
+            <a href="{% url 'index' %}">Zurück zur Übersicht</a>
+        </div>
     </div>
 </main>
+
+<script>
+function showGeneratingStatus() {
+    const el = document.getElementById("status-message");
+    if (el) {
+        el.innerText = "🎬 Highlights werden generiert... Bitte bleib auf der Seite.";
+    }
+}
+</script>
 
 </div>
 </body>

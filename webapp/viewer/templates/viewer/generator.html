@@ -101,25 +101,31 @@
             {% for clip in clips_data %}
                 <div class="highlight-item">
                     {% if clip.media_url %}
-                    <video controls preload="none" width="280">
-                        <source src="{{ clip.media_url }}" type="video/mp4"> Dein Browser unterstützt das Video-Tag nicht. </video>
-                    <p>{{ clip.clip_link }}</p>
-                    {% else %} <p style="color: orange;">Clip-URL Fehler.</p> <p>({{ clip.clip_link }})</p> {% endif %}
+                        <video controls preload="none" width="280">
+                            <source src="{{ clip.media_url }}" type="video/mp4">
+                            Dein Browser unterstützt das Video-Tag nicht.
+                        </video>
+                        <p><strong>Grund:</strong> {{ clip.reason|default:"Unbekannt" }}</p>
+                        <p>{{ clip.clip_link }}</p>
+                    {% else %}
+                        <p style="color: orange;">Clip-URL Fehler.</p>
+                        <p>({{ clip.clip_link }})</p>
+                    {% endif %}
                 </div>
-             {% empty %}
+            {% empty %}
                 <div class="no-highlights">
-                     <p>Noch keine Highlights für dieses Video gefunden.</p>
-                     {% if stream.analysis_status == 'COMPLETE' %}
-                         <p>(Versuche, Highlights mit einem anderen Threshold neu zu generieren.)</p>
-                     {% endif %}
+                    <p>Noch keine Highlights für dieses Video gefunden.</p>
+                    {% if stream.analysis_status == 'COMPLETE' %}
+                        <p>(Versuche, Highlights mit einem anderen Threshold neu zu generieren.)</p>
+                    {% endif %}
                 </div>
             {% endfor %}
         </div>
 
         <div style="text-align: center; margin-top: 40px; padding-bottom: 40px;">
-             <a href="{% url 'video_player' stream_id=stream.id %}" style="margin-right: 15px;">Zurück zum Video</a> |
-             <a href="{% url 'index' %}" style="margin-left: 15px;">Zurück zur Übersicht</a>
-         </div>
+            <a href="{% url 'video_player' stream_id=stream.id %}" style="margin-right: 15px;">Zurück zum Video</a> |
+            <a href="{% url 'index' %}" style="margin-left: 15px;">Zurück zur Übersicht</a>
+        </div>
     </div>
 </main>
 

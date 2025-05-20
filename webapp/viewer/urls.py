@@ -20,4 +20,6 @@ urlpatterns = [
     # --- NEUE URLS für Twitch VOD Import ---
     path('fetch_twitch_vods/', views.fetch_twitch_vods_view, name='fetch_twitch_vods'),
     path('import_twitch_vod/<str:vod_id>/', views.import_selected_twitch_vod_view, name='import_selected_twitch_vod'),
+    path('generate/<int:stream_id>/', views.generate_highlights_view, name='generate_highlights'),
+    path('generator/<int:stream_id>/', views.generator_view, name='generator'),
 ]
