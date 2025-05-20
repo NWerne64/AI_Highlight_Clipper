@@ -12,6 +12,7 @@ import argparse
 import signal
 import threading
 import traceback
+import shutil  # Wichtig für shutil.move
 
 
 class TwitchResponseStatus(enum.Enum):
@@ -23,8 +24,8 @@ class TwitchResponseStatus(enum.Enum):
 
 
 class BackgroundTwitchRecorder:
-    def __init__(self, username, quality, stream_uid, output_path, client_id, client_secret, ffmpeg_path="ffmpeg",
-                 disable_ffmpeg=False, refresh=15):
+    def __init__(self, username, quality, stream_uid, output_path, client_id, client_secret,
+                 ffmpeg_path="ffmpeg", disable_ffmpeg=False, refresh=15, streamlink_path="streamlink"):
         self.username = username
         self.quality = quality
         self.stream_uid = stream_uid
@@ -32,6 +33,7 @@ class BackgroundTwitchRecorder:
         self.client_id = client_id
         self.client_secret = client_secret
         self.ffmpeg_path = ffmpeg_path
+        self.streamlink_path = streamlink_path
         self.disable_ffmpeg = disable_ffmpeg
         self.refresh = max(15, refresh)
         self.token_url = f"https://id.twitch.tv/oauth2/token?client_id={self.client_id}&client_secret={self.client_secret}&grant_type=client_credentials"
@@ -42,33 +44,26 @@ class BackgroundTwitchRecorder:
 
         script_dir = os.path.dirname(os.path.abspath(__file__))
         log_dir_path = os.path.join(script_dir, "recorder_logs")
-        if not os.path.exists(log_dir_path):
-            os.makedirs(log_dir_path, exist_ok=True)
+        os.makedirs(log_dir_path, exist_ok=True)
         self.log_file = os.path.join(log_dir_path, f"recorder_{self.stream_uid}.log")
 
         log_format = f'%(asctime)s - UID:{self.stream_uid} - %(levelname)s - %(message)s'
         self.logger = logging.getLogger(f"BGRecorder_{self.stream_uid}")
-        self.logger.setLevel(logging.INFO)
-        self.logger.propagate = False
+        if not self.logger.hasHandlers():
+            self.logger.setLevel(logging.INFO)
+            self.logger.propagate = False
+            try:
+                file_handler = logging.FileHandler(self.log_file, encoding='utf-8')
+                file_handler.setLevel(logging.INFO)
+                formatter = logging.Formatter(log_format)
+                file_handler.setFormatter(formatter)
+                self.logger.addHandler(file_handler)
+            except Exception as log_e:
+                print(f"FEHLER beim Erstellen des Log Handlers für {self.log_file}: {log_e}")
+                self.logger = None
 
-        for handler in self.logger.handlers[:]:
-            self.logger.removeHandler(handler)
-            handler.close()
-        try:
-            file_handler = logging.FileHandler(self.log_file, encoding='utf-8')
-            file_handler.setLevel(logging.INFO)
-            formatter = logging.Formatter(log_format)
-            file_handler.setFormatter(formatter)
-            self.logger.addHandler(file_handler)
-        except Exception as log_e:
-            print(f"FEHLER beim Erstellen des Log Handlers für {self.log_file}: {log_e}")
-            self.logger = None
-
-        if self.logger:
-            self.logger.info(
-                f"Recorder initialized for user '{username}', UID '{stream_uid}'. Output: {self.output_path}. Log: {self.log_file}")
-        else:
-            print(f"INIT (NO LOG) - UID:{self.stream_uid} - User:'{username}', Output: {self.output_path}")
+        self._log(
+            f"Recorder initialized. User: '{username}', UID: '{stream_uid}', Output: {self.output_path}, Log: {self.log_file}")
 
         signal.signal(signal.SIGINT, self.graceful_shutdown_handler)
         signal.signal(signal.SIGTERM, self.graceful_shutdown_handler)
@@ -77,300 +72,344 @@ class BackgroundTwitchRecorder:
         if self.logger:
             self.logger.log(level, message)
         else:
-            print(f"LOG UID:{self.stream_uid} - {logging.getLevelName(level)} - {message}")
+            timestamp = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S,%f")[:-3]
+            print(f"{timestamp} - UID:{self.stream_uid} - {logging.getLevelName(level)} - {message}")
 
     def graceful_shutdown_handler(self, signum, frame):
-        signal_name = signal.Signals(signum).name
-        self._log(f"Signal {signal_name} ({signum}) empfangen. Starte sauberes Herunterfahren.", logging.WARNING)
+        signal_name = signal.Signals(signum).name if hasattr(signal, 'Signals') else f"Signal {signum}"
+        self._log(f"Signal {signal_name} empfangen. Starte sauberes Herunterfahren.", logging.WARNING)
         self.shutdown_event.set()
 
         if self.streamlink_process and self.streamlink_process.poll() is None:
-            self._log("Sende SIGINT (Ctrl+C) an Streamlink-Prozess, um Aufnahme zu finalisieren...", logging.INFO)
+            self._log("Sende Signal an Streamlink-Prozess...", logging.INFO)
             try:
                 if os.name == 'nt':
-                    self.streamlink_process.terminate()
+                    self.streamlink_process.terminate()  # SIGTERM auf Windows
                     self._log("SIGTERM an Streamlink gesendet (Windows).", logging.INFO)
                 else:
-                    self.streamlink_process.send_signal(signal.SIGINT)
+                    self.streamlink_process.send_signal(signal.SIGINT)  # SIGINT auf Unix
                     self._log("SIGINT an Streamlink gesendet (Unix-like).", logging.INFO)
-                time.sleep(1)
-            except Exception as e:
-                self._log(f"Fehler beim Senden des Beendigungssignals an Streamlink: {e}", logging.ERROR)
+
+                # Warte auf Streamlink mit Timeout
+                self.streamlink_process.wait(timeout=30)  # 30 Sekunden
+                self._log(f"Streamlink-Prozess beendet nach Signal mit RC: {self.streamlink_process.returncode}.",
+                          logging.INFO)
+            except subprocess.TimeoutExpired:
+                self._log("Streamlink-Prozess nicht innerhalb von 30s nach Signal beendet. Erzwinge Kill.",
+                          logging.WARNING)
                 self.streamlink_process.kill()
+                self.streamlink_process.wait()
+            except Exception as e:
+                self._log(f"Fehler beim Beenden von Streamlink: {e}", logging.ERROR)
+                if self.streamlink_process.poll() is None:
+                    self.streamlink_process.kill()
+                    self.streamlink_process.wait()
         else:
-            self._log("Kein laufender Streamlink-Prozess gefunden oder bereits beendet beim Signalempfang.",
-                      logging.INFO)
+            self._log("Kein laufender Streamlink-Prozess oder bereits beendet.", logging.INFO)
 
     def fetch_access_token(self):
         try:
             self._log("Rufe Access Token ab...")
-            token_response = requests.post(self.token_url, timeout=15)
-            token_response.raise_for_status()
-            token = token_response.json()
-            self.access_token = token["access_token"]
-            self._log("Access Token erfolgreich abgerufen.")
-            return True
-        except requests.exceptions.RequestException as e:
+            response = requests.post(self.token_url, timeout=15)
+            response.raise_for_status()
+            token_data = response.json()
+            self.access_token = token_data.get("access_token")
+            if self.access_token:
+                self._log("Access Token erfolgreich.")
+                return True
+            self._log(f"Fehler: 'access_token' nicht in API Antwort. Antwort: {token_data}", logging.ERROR)
+            return False
+        except Exception as e:
             self._log(f"Fehler beim Abrufen des Access Tokens: {e}", logging.ERROR)
             return False
 
     def check_user(self):
-        if not self.access_token:
-            if not self.fetch_access_token():
-                return TwitchResponseStatus.ERROR, None
-
-        status, info = TwitchResponseStatus.ERROR, None
+        if not self.access_token and not self.fetch_access_token():
+            return TwitchResponseStatus.ERROR, None
         try:
             headers = {"Client-ID": self.client_id, "Authorization": "Bearer " + self.access_token}
             params = {"user_login": self.username}
-            self._log(f"Prüfe Twitch API für Benutzer: {self.username}")
             r = requests.get(self.helix_url, headers=headers, params=params, timeout=15)
             r.raise_for_status()
             info = r.json()
-            if info is None or not info.get("data"):
-                status = TwitchResponseStatus.OFFLINE
-                self._log(f"Benutzer {self.username} ist OFFLINE.")
-            else:
-                status = TwitchResponseStatus.ONLINE
-                self._log(f"Benutzer {self.username} ist ONLINE: {info['data'][0]['title']}")
-        except requests.exceptions.RequestException as e:
-            self._log(f"Fehler beim Prüfen des Benutzerstatus: {e}", logging.ERROR)
-            if e.response is not None:
-                self._log(f"Antwortstatus: {e.response.status_code}, Text: {e.response.text}", logging.ERROR)
-                if e.response.status_code == 401:
-                    status = TwitchResponseStatus.UNAUTHORIZED
-                    self.access_token = None
-                elif e.response.status_code == 404:
-                    status = TwitchResponseStatus.NOT_FOUND
-                else:
-                    status = TwitchResponseStatus.ERROR
-            else:
-                status = TwitchResponseStatus.ERROR
+            if info.get("data"):
+                self._log(f"Benutzer {self.username} ist ONLINE: {info['data'][0].get('title', 'N/A')}")
+                return TwitchResponseStatus.ONLINE, info
+            self._log(f"Benutzer {self.username} ist OFFLINE.")
+            return TwitchResponseStatus.OFFLINE, info
+        except requests.exceptions.HTTPError as http_err:
+            # ... (Fehlerbehandlung wie zuvor)
+            if http_err.response.status_code == 401: self.access_token = None; return TwitchResponseStatus.UNAUTHORIZED, None
+            if http_err.response.status_code == 404: return TwitchResponseStatus.NOT_FOUND, None
+            self._log(f"HTTP Fehler bei Benutzerprüfung: {http_err}", logging.ERROR)
+            return TwitchResponseStatus.ERROR, None
         except Exception as ex:
-            self._log(f"Unerwarteter Fehler bei der Benutzerprüfung: {ex}\n{traceback.format_exc()}", logging.ERROR)
-            status = TwitchResponseStatus.ERROR
-        return status, info
+            self._log(f"Unerwarteter Fehler bei Benutzerprüfung: {ex}", logging.ERROR)
+            return TwitchResponseStatus.ERROR, None
 
     def record_stream(self):
         output_dir = os.path.dirname(self.output_path)
-        if not os.path.exists(output_dir):
-            try:
-                os.makedirs(output_dir, exist_ok=True)
-                self._log(f"Ausgabeverzeichnis erstellt: {output_dir}")
-            except OSError as e:
-                self._log(f"Konnte Ausgabeverzeichnis nicht erstellen {output_dir}: {e}", logging.CRITICAL)
-                return False
+        os.makedirs(output_dir, exist_ok=True)
 
         streamlink_cmd = [
-            "streamlink",
-            "--twitch-disable-ads",
-            f"twitch.tv/{self.username}",
-            self.quality,
-            "-o", self.output_path
+            self.streamlink_path, "--twitch-disable-ads",
+            f"twitch.tv/{self.username}", self.quality,
+            "-o", self.output_path,
+            "--ffmpeg-ffmpeg", self.ffmpeg_path, "--force"
         ]
         self._log(f"Starte Streamlink: {' '.join(streamlink_cmd)}")
-
         try:
+            creation_flags = subprocess.CREATE_NEW_PROCESS_GROUP if os.name == 'nt' else 0
             self.streamlink_process = subprocess.Popen(streamlink_cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
-                                                       text=True, encoding='utf-8')
+                                                       text=True, encoding='utf-8', creationflags=creation_flags)
             self._log(f"Streamlink gestartet mit PID: {self.streamlink_process.pid}")
 
             while self.streamlink_process.poll() is None:
                 if self.shutdown_event.is_set():
-                    self._log("Shutdown-Event während der Aufnahme erkannt. Beende Streamlink...", logging.INFO)
-                    break
+                    self._log("Shutdown während Aufnahme. Beende Streamlink...", logging.INFO)
+                    self.graceful_shutdown_handler(signal.SIGTERM if os.name != 'nt' else signal.SIGINT, None)
+                    break  # Aus der Warteschleife
                 time.sleep(0.5)
 
-            timeout_seconds = 45
-            self._log(f"Warte auf Beendigung des Streamlink-Prozesses (max. {timeout_seconds}s)...")
+            # Finale Kommunikation nach Beendigung (oder Timeout von graceful_shutdown_handler)
+            stdout, stderr = "", ""
+            if self.streamlink_process:  # Nur wenn Prozessobjekt existiert
+                try:
+                    stdout, stderr = self.streamlink_process.communicate(timeout=15)  # Kurzes Timeout für Reste
+                except subprocess.TimeoutExpired:
+                    self._log("Streamlink communicate() timed out after process end/kill.", logging.WARNING)
+                    if self.streamlink_process.poll() is None: self.streamlink_process.kill()  # Sicherstellen, dass er tot ist
+                return_code = self.streamlink_process.returncode
+            else:  # Sollte nicht passieren, wenn graceful_shutdown_handler richtig funktioniert
+                return_code = -1  # Unbekannter Fehler
+                self._log("Streamlink-Prozessobjekt war None nach der Schleife.", logging.ERROR)
 
-            try:
-                stdout, stderr = self.streamlink_process.communicate(timeout=timeout_seconds)
-            except subprocess.TimeoutExpired:
-                self._log(f"Streamlink Timeout ({timeout_seconds}s) nach Beendigungssignal! Prozess wird gekillt.",
-                          logging.WARNING)
-                self.streamlink_process.kill()
-                stdout, stderr = self.streamlink_process.communicate()
-
-            return_code = self.streamlink_process.returncode
             if stdout: self._log(f"Streamlink stdout:\n{stdout.strip()}", logging.DEBUG)
 
-            if self.shutdown_event.is_set():
-                self._log(f"Streamlink beendet (RC: {return_code}) nach externem Shutdown-Signal.", logging.INFO)
-                if os.path.exists(self.output_path) and os.path.getsize(self.output_path) > 0:
-                    self._log(
-                        "Aufnahmedatei existiert und ist nicht leer. Aufnahme gilt als 'erfolgreich' für die Nachbearbeitung.")
-                    return True
-                else:
-                    self._log("Aufnahmedatei nach Shutdown nicht gefunden oder leer. Aufnahme fehlgeschlagen.",
-                              logging.WARNING)
-                    if stderr: self._log(f"Streamlink stderr (nach Shutdown):\n{stderr.strip()}", logging.WARNING)
-                    return False
-
             if return_code == 0:
-                self._log("Streamlink Aufnahme erfolgreich beendet (normaler Exit).")
-                return True
+                self._log("Streamlink Aufnahme erfolgreich beendet.")
+            elif self.shutdown_event.is_set():
+                self._log(f"Streamlink durch Shutdown beendet (RC: {return_code}). Datei könnte unvollständig sein.",
+                          logging.WARNING)
+                if stderr: self._log(f"Streamlink stderr (Shutdown):\n{stderr.strip()}", logging.WARNING)
             else:
-                self._log(f"Streamlink Aufnahme fehlgeschlagen! Rückgabecode: {return_code}", logging.ERROR)
+                self._log(f"Streamlink Aufnahme fehlgeschlagen! RC: {return_code}", logging.ERROR)
                 if stderr: self._log(f"Streamlink stderr:\n{stderr.strip()}", logging.ERROR)
-                if os.path.exists(self.output_path):
-                    try:
-                        os.remove(self.output_path)
-                        self._log("Unvollständige Aufnahmedatei nach Streamlink-Fehler gelöscht.")
-                    except OSError as e_rm:
-                        self._log(f"Konnte unvollständige Datei nicht löschen: {self.output_path}: {e_rm}",
-                                  logging.WARNING)
-                return False
+                if os.path.exists(self.output_path): os.remove(self.output_path)
+                return False  # Klare Fehlermeldung
 
-        except FileNotFoundError:
-            self._log("FEHLER: 'streamlink' Kommando nicht gefunden. Ist Streamlink installiert und im PATH?",
-                      logging.CRITICAL)
+            if os.path.exists(self.output_path) and os.path.getsize(self.output_path) > 1000:
+                self._log("Aufnahmedatei existiert und ist >1KB.")
+                return True  # Datei ist da, Optimierung kann versucht werden
+            self._log("Aufnahmedatei nicht gefunden oder leer nach Streamlink.", logging.ERROR)
             return False
         except Exception as e:
-            self._log(f"Unerwarteter Fehler während der Streamlink-Ausführung: {e}\n{traceback.format_exc()}",
-                      logging.CRITICAL)
+            self._log(f"Unerwarteter Fehler während Streamlink-Ausführung: {e}", logging.CRITICAL)
+            traceback.print_exc()
+            if hasattr(self,
+                       'streamlink_process') and self.streamlink_process and self.streamlink_process.poll() is None:
+                self.streamlink_process.kill()
             return False
 
     def process_recorded_file(self):
-        if not os.path.exists(self.output_path) or os.path.getsize(self.output_path) == 0:
-            self._log(f"Aufnahmedatei {self.output_path} nicht vorhanden oder leer. Überspringe FFmpeg-Verarbeitung.",
+        if self.disable_ffmpeg:
+            self._log("FFmpeg-Verarbeitung ist deaktiviert.")
+            return os.path.exists(self.output_path) and os.path.getsize(self.output_path) > 1000
+
+        if not os.path.exists(self.output_path) or os.path.getsize(self.output_path) < 1000:
+            self._log(f"Aufnahmedatei {self.output_path} für FFmpeg nicht geeignet oder nicht vorhanden.",
                       logging.WARNING)
             return False
 
-        if self.disable_ffmpeg:
-            self._log("FFmpeg-Verarbeitung ist deaktiviert.")
-            return True
+        base, ext = os.path.splitext(self.output_path);
+        ext = ext or ".mp4"
+        # Ein etwas anderer temporärer Name, um sicherzustellen, dass wir nicht versehentlich das Original überschreiben,
+        # bevor wir sicher sind, dass das Repacking erfolgreich war.
+        temp_optimized_path = base + ".optimized_temp" + ext
 
-        temp_fixed_path = self.output_path + ".fixed.mp4"
-        ffmpeg_cmd = [self.ffmpeg_path, "-nostdin", "-i", self.output_path, "-c", "copy", "-map", "0", "-loglevel",
-                      "error", temp_fixed_path, "-y"]
-        self._log(f"Starte FFmpeg zur Überprüfung/Reparatur: {' '.join(ffmpeg_cmd)}")
+        ffmpeg_cmd = [
+            self.ffmpeg_path, "-nostdin",
+            "-i", self.output_path,
+            "-c", "copy", "-map", "0", "-movflags", "+faststart",
+            "-loglevel", "error", temp_optimized_path, "-y"
+        ]
+        self._log(f"Starte FFmpeg Optimierung: {' '.join(ffmpeg_cmd)}")
+        ffmpeg_process = None
 
         try:
+            # Stelle sicher, dass alle Handles zum self.output_path von Streamlink geschlossen sind.
+            # Streamlink sollte die Datei nach Beendigung schließen.
+            # Wenn ffmpeg die Datei nicht öffnen kann, ist das ein Hinweis darauf, dass sie noch gesperrt ist.
+
             ffmpeg_process = subprocess.Popen(ffmpeg_cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True,
                                               encoding='utf-8')
-            timeout_ffmpeg = 300
-            self._log(f"Warte auf FFmpeg (max. {timeout_ffmpeg}s)...")
-            stdout, stderr = ffmpeg_process.communicate(timeout=timeout_ffmpeg)
+            # Warte auf den FFmpeg-Prozess. Timeout sollte großzügig sein für große Dateien.
+            timeout_ffmpeg_config_key = 'FFMPEG_REPACK_TIMEOUT_RECORDER'  # Eigener Key für Recorder
+            default_timeout = 1800  # 30 Minuten Default
+            # Versuche, Timeout aus Django Settings zu laden, falls im Django Kontext.
+            # Da dieses Skript extern läuft, ist der direkte Zugriff auf Django settings nicht immer gegeben.
+            # Die Übergabe als Argument wäre robuster, aber für jetzt versuchen wir es so, falls es als Modul importiert wird.
+            timeout_ffmpeg = default_timeout
+            try:
+                from django.conf import settings as django_settings
+                timeout_ffmpeg = getattr(django_settings, timeout_ffmpeg_config_key, default_timeout)
+            except ImportError:
+                pass  # Django settings nicht verfügbar, verwende Default
 
+            stdout, stderr = ffmpeg_process.communicate(timeout=timeout_ffmpeg)
             return_code = ffmpeg_process.returncode
 
             if return_code == 0:
-                os.replace(temp_fixed_path, self.output_path)
-                self._log(f"FFmpeg-Verarbeitung erfolgreich abgeschlossen für {self.output_path}")
-                return True
-            else:
-                self._log(f"FFmpeg-Verarbeitung fehlgeschlagen! Rückgabecode: {return_code}", logging.ERROR)
-                if stderr: self._log(f"FFmpeg stderr:\n{stderr.strip()}", logging.ERROR)
-                if stdout: self._log(f"FFmpeg stdout:\n{stdout.strip()}", logging.DEBUG)
-                if os.path.exists(temp_fixed_path):
-                    try:
-                        os.remove(temp_fixed_path)
-                    except OSError as e_rm_ffmpeg:
-                        self._log(f"Konnte temporäre FFmpeg-Datei nicht löschen: {e_rm_ffmpeg}", logging.WARNING)
-                return False
+                self._log(f"FFmpeg Optimierung erfolgreich abgeschlossen. Temporäre Datei: {temp_optimized_path}")
 
-        except FileNotFoundError:
-            self._log(f"FEHLER: '{self.ffmpeg_path}' (FFmpeg) Kommando nicht gefunden. Verarbeitung nicht möglich.",
-                      logging.CRITICAL)
-            return False
+                # WICHTIG: Stelle sicher, dass der ffmpeg_process beendet ist und seine Handles freigegeben hat.
+                # communicate() wartet bereits darauf.
+
+                # Kurze Pause, um dem Dateisystem Zeit zu geben, Handles vollständig freizugeben
+                time.sleep(2)  # Erhöhe auf 2 Sekunden, um sicherzugehen
+
+                try:
+                    # Prüfe, ob die temporäre Datei wirklich existiert und eine plausible Größe hat
+                    if not os.path.exists(temp_optimized_path) or os.path.getsize(temp_optimized_path) < 1000:
+                        self._log(
+                            f"FEHLER: Optimierte Datei {temp_optimized_path} nicht gefunden oder zu klein nach FFmpeg-Erfolg.",
+                            logging.ERROR)
+                        # Originaldatei behalten, da Optimierung fehlschlug
+                        return os.path.exists(self.output_path) and os.path.getsize(self.output_path) > 1000
+
+                    # Jetzt die Dateioperationen
+                    shutil.move(temp_optimized_path, self.output_path)  # shutil.move überschreibt das Ziel
+                    self._log(f"Original-Aufnahme '{self.output_path}' erfolgreich durch optimierte Version ersetzt.")
+                    return True
+                except Exception as e_move:
+                    self._log(
+                        f"FEHLER beim Ersetzen der Originaldatei ('{self.output_path}') durch die optimierte Datei ('{temp_optimized_path}'): {e_move}",
+                        logging.CRITICAL)
+                    traceback.print_exc()
+                    # Wenn das Verschieben fehlschlägt, versuchen wir, die temporäre Datei zu löschen.
+                    # Die Originaldatei (nicht optimiert) bleibt bestehen.
+                    if os.path.exists(temp_optimized_path):
+                        try:
+                            os.remove(temp_optimized_path)
+                        except Exception as e_rm_temp:
+                            self._log(
+                                f"Konnte temp. optimierte Datei {temp_optimized_path} nach Fehler nicht löschen: {e_rm_temp}",
+                                logging.WARNING)
+                    self._log(
+                        "WARNUNG: FFmpeg-Optimierung war erfolgreich, aber die optimierte Datei konnte die Originaldatei nicht ersetzen. Original wird verwendet.",
+                        logging.WARNING)
+                    return os.path.exists(self.output_path) and os.path.getsize(
+                        self.output_path) > 1000  # Erfolg, wenn Original noch da
+            else:
+                self._log(f"FFmpeg-Optimierung fehlgeschlagen! Rückgabecode: {return_code}", logging.ERROR)
+                if stderr: self._log(f"FFmpeg stderr:\n{stderr.strip()}", logging.ERROR)
+                if stdout: self._log(f"FFmpeg stdout (bei Fehler):\n{stdout.strip()}", logging.DEBUG)
+                if os.path.exists(temp_optimized_path):
+                    try:
+                        os.remove(temp_optimized_path)
+                    except Exception as e_rm_temp_fail:
+                        self._log(
+                            f"Konnte temp. optimierte Datei '{temp_optimized_path}' nach FFmpeg-Fehler nicht löschen: {e_rm_temp_fail}",
+                            logging.WARNING)
+                self._log("WARNUNG: FFmpeg-Optimierung fehlgeschlagen. Originalaufnahme wird verwendet.",
+                          logging.WARNING)
+                return os.path.exists(self.output_path) and os.path.getsize(self.output_path) > 1000
+
         except subprocess.TimeoutExpired:
-            self._log(f"FFmpeg-Verarbeitung Timeout ({timeout_ffmpeg}s). Prozess wird gekillt.", logging.ERROR)
-            if 'ffmpeg_process' in locals() and ffmpeg_process.poll() is None:
-                ffmpeg_process.kill()
+            self._log(f"FFmpeg-Optimierungsprozess Timeout ({timeout_ffmpeg}s).", logging.ERROR)
+            if ffmpeg_process and ffmpeg_process.poll() is None:
+                ffmpeg_process.kill();
                 ffmpeg_process.communicate()
-            if os.path.exists(temp_fixed_path):
+            if os.path.exists(temp_optimized_path):
                 try:
-                    os.remove(temp_fixed_path)
-                except OSError as e_rm_timeout:
-                    self._log(f"Konnte temp. FFmpeg-Datei nach Timeout nicht löschen: {e_rm_timeout}", logging.WARNING)
-            return False
-        except Exception as e:
-            self._log(f"Unerwarteter Fehler während der FFmpeg-Verarbeitung: {e}\n{traceback.format_exc()}",
+                    os.remove(temp_optimized_path)
+                except Exception as e_rm_timeout:
+                    self._log(
+                        f"Konnte temp. optimierte Datei '{temp_optimized_path}' nach Timeout nicht löschen: {e_rm_timeout}",
+                        logging.WARNING)
+            self._log("WARNUNG: FFmpeg-Optimierung Timeout. Originalaufnahme wird verwendet.", logging.WARNING)
+            return os.path.exists(self.output_path) and os.path.getsize(self.output_path) > 1000
+        except FileNotFoundError:
+            self._log(f"FEHLER: '{self.ffmpeg_path}' (FFmpeg) wurde nicht gefunden. Optimierung übersprungen.",
                       logging.CRITICAL)
-            if os.path.exists(temp_fixed_path):
+            return os.path.exists(self.output_path) and os.path.getsize(self.output_path) > 1000
+        except Exception as e:
+            self._log(f"Unerwarteter Fehler während der FFmpeg-Optimierung: {e}", logging.CRITICAL)
+            traceback.print_exc()
+            if os.path.exists(temp_optimized_path):
                 try:
-                    os.remove(temp_fixed_path)
-                except OSError as e_rm_unexp:
-                    self._log(f"Konnte temp. FFmpeg-Datei nach unerw. Fehler nicht löschen: {e_rm_unexp}",
-                              logging.WARNING)
-            return False
+                    os.remove(temp_optimized_path)
+                except Exception as e_rm_unexp:
+                    self._log(
+                        f"Konnte temp. optimierte Datei '{temp_optimized_path}' nach unerwartetem Fehler nicht löschen: {e_rm_unexp}",
+                        logging.WARNING)
+            self._log("WARNUNG: Unerwarteter Fehler bei FFmpeg-Optimierung. Originalaufnahme wird verwendet.",
+                      logging.WARNING)
+            return os.path.exists(self.output_path) and os.path.getsize(self.output_path) > 1000
 
     def run_check_and_record(self):
-        self._log(f"--- Starte Aufnahme-Task für {self.username} (UID: {self.stream_uid}) ---")
-
-        status, _ = self.check_user()
+        self._log(f"--- Aufnahme-Task gestartet für {self.username} ---")
         final_task_success = False
+        try:
+            if self.shutdown_event.is_set(): return False
+            status, _ = self.check_user()
+            if self.shutdown_event.is_set(): return False
 
-        if self.shutdown_event.is_set():
-            self._log("Shutdown-Signal bereits vor Beginn der Benutzerprüfung/Aufnahme empfangen. Breche ab.",
-                      logging.WARNING)
-            return False
-
-        if status == TwitchResponseStatus.ONLINE:
-            self._log(f"Benutzer {self.username} ist online. Starte Aufnahmeversuch...")
-            if self.record_stream():
-                if self.process_recorded_file():
-                    self._log(f"--- Aufnahme und FFmpeg-Verarbeitung für {self.output_path} ERFOLGREICH ---")
-                    final_task_success = True
-                else:
-                    self._log(
-                        f"--- Aufnahme für {self.output_path} OK, aber FFmpeg-Verarbeitung FEHLGESCHLAGEN. Rohdatei könnte vorhanden sein. ---",
-                        logging.ERROR)
-                    final_task_success = False
+            if status == TwitchResponseStatus.ONLINE:
+                if self.record_stream():  # Nimmt auf, gibt True zurück, wenn Datei existiert
+                    # Wichtig: process_recorded_file wird nur aufgerufen, wenn record_stream erfolgreich war
+                    # UND die Datei auch wirklich da ist (wird in record_stream geprüft)
+                    if self.process_recorded_file():  # Optimiert oder verwendet Original
+                        self._log(f"Aufnahme und Nachbearbeitung für {self.output_path} abgeschlossen.")
+                        final_task_success = True
+                    else:  # process_recorded_file gab False zurück (z.B. Fehler beim Verschieben der optimierten Datei)
+                        self._log(
+                            f"Aufnahme erstellt, aber kritischer Fehler bei Nachbearbeitung von {self.output_path}.",
+                            logging.ERROR)
+                else:  # record_stream gab False zurück
+                    self._log("Aufnahme fehlgeschlagen (record_stream).", logging.ERROR)
+            elif status == TwitchResponseStatus.OFFLINE:
+                self._log("Benutzer offline. Task beendet.")
             else:
-                self._log(
-                    f"--- Aufnahme für UID: {self.stream_uid} FEHLGESCHLAGEN (record_stream gab False zurück). ---",
-                    logging.ERROR)
-        elif status == TwitchResponseStatus.OFFLINE:
-            self._log(f"--- Benutzer {self.username} ist offline. Task beendet. ---")
-        elif self.shutdown_event.is_set():
-            self._log("Shutdown-Signal während der Benutzerprüfung empfangen. Breche ab.", logging.WARNING)
-        else:
-            self._log(f"--- Prüfung für Benutzer {self.username} fehlgeschlagen (Status: {status}). Task beendet. ---",
-                      logging.ERROR)
-
-        if self.shutdown_event.is_set():
-            self._log(
-                f"--- Aufnahme-Task für UID: {self.stream_uid} wurde durch Shutdown-Signal beendet oder unterbrochen. ---",
-                logging.WARNING)
-
+                self._log(f"Benutzerprüfung fehlgeschlagen (Status: {status}). Task beendet.", logging.ERROR)
+        except Exception as e_run_main:
+            self._log(f"KRITISCHER FEHLER in run_check_and_record: {e_run_main}", logging.CRITICAL)
+            traceback.print_exc()
+        finally:
+            log_level = logging.WARNING if self.shutdown_event.is_set() else logging.INFO
+            self._log(f"--- Aufnahme-Task beendet. Erfolg: {final_task_success} ---", level=log_level)
+            if self.logger:
+                for handler in self.logger.handlers[:]: handler.close(); self.logger.removeHandler(handler)
+                logging.shutdown()
         return final_task_success
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Record a Twitch stream if online, with graceful shutdown.")
-    parser.add_argument("--username", required=True, help="Twitch username.")
-    parser.add_argument("--quality", default="480p", help="Stream quality (z.B. 720p, best, worst).")
-    parser.add_argument("--uid", required=True, help="Unique Stream ID from Django.")
-    parser.add_argument("--output-path", required=True, help="Full path for the recording (inkl. Dateiname .mp4).")
-    parser.add_argument("--client-id", required=True, help="Twitch Client ID.")
-    parser.add_argument("--client-secret", required=True, help="Twitch Client Secret.")
-    parser.add_argument("--disable-ffmpeg", action="store_true", help="Disable ffmpeg post-processing.")
+    parser = argparse.ArgumentParser(description="Twitch Stream Recorder")
+    parser.add_argument("--username", required=True)
+    parser.add_argument("--quality", default="480p")
+    parser.add_argument("--uid", required=True)
+    parser.add_argument("--output-path", required=True)
+    parser.add_argument("--client-id", required=True)
+    parser.add_argument("--client-secret", required=True)
+    parser.add_argument("--ffmpeg-path", default="ffmpeg")
+    parser.add_argument("--streamlink-path", default="streamlink")
+    parser.add_argument("--disable-ffmpeg", action="store_true")
+    parser.add_argument("--refresh-interval", type=int, default=15)
     args = parser.parse_args()
 
     recorder = BackgroundTwitchRecorder(
         username=args.username, quality=args.quality, stream_uid=args.uid,
         output_path=args.output_path, client_id=args.client_id,
-        client_secret=args.client_secret, disable_ffmpeg=args.disable_ffmpeg
+        client_secret=args.client_secret, ffmpeg_path=args.ffmpeg_path,
+        disable_ffmpeg=args.disable_ffmpeg, refresh=args.refresh_interval,
+        streamlink_path=args.streamlink_path
     )
-
     exit_code = 1
     try:
-        if recorder.run_check_and_record():
-            exit_code = 0
-    except Exception as e_main:
-        if recorder.logger:
-            recorder.logger.critical(
-                f"Kritischer, unerwarteter Fehler im Hauptteil des Recorders: {e_main}\n{traceback.format_exc()}",
-                exc_info=False)
-        else:
-            print(f"KRITISCHER FEHLER (UID {args.uid}): {e_main}\n{traceback.format_exc()}")
+        if recorder.run_check_and_record(): exit_code = 0
+    except Exception as e_main_script:
+        print(f"Kritischer Fehler im Skript-Hauptteil (UID {args.uid}): {e_main_script}\n{traceback.format_exc()}")
     finally:
-        if recorder.logger:
-            recorder.logger.info(f"Recorder-Skript für UID {args.uid} wird beendet mit Exit-Code: {exit_code}.")
-            logging.shutdown()
-        else:
-            print(f"Recorder-Skript für UID {args.uid} beendet mit Exit-Code: {exit_code}.")
-
+        print(f"Recorder-Skript (UID {args.uid}) beendet mit Exit-Code: {exit_code}.")
     sys.exit(exit_code)

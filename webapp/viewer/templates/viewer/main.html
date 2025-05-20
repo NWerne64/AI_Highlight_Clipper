@@ -16,6 +16,7 @@
             #record-form button[type="submit"] { padding: 10px 25px; font-weight: 500; border: none; border-radius: 5px; background-color: #6f42c1; color: white; cursor: pointer; transition: background-color 0.2s; margin-top: 15px; }
             #record-form button[type="submit"]:hover { background-color: #5a32a3; }
             #record-form p { font-size: smaller; color: #aaa; margin-top: 10px; }
+
             #upload-form { background-color: rgba(255, 255, 255, 0.1); padding: 20px; border-radius: 8px; margin-bottom: 40px; border: 1px solid #6c757d; }
             #upload-form h2 { color: white; margin-bottom: 15px; }
             #upload-form label { display: block; margin-bottom: 5px; color: #eee; font-weight: bold;}
@@ -24,6 +25,17 @@
             #upload-form input[type="file"]::file-selector-button:hover { background-color: #0056b3; }
             #upload-form button[type="submit"] { padding: 10px 25px; font-weight: 500; border: none; border-radius: 5px; background-color: #007bff; color: white; cursor: pointer; transition: background-color 0.2s; }
             #upload-form button[type="submit"]:hover { background-color: #0056b3; }
+
+            /* NEUES STYLING FÜR TWITCH IMPORT FORM */
+            #twitch-import-form { margin-top: 30px; background-color: rgba(148, 0, 211, 0.1); padding: 20px; border-radius: 8px; border: 1px solid #9400D3; } /* Lila Akzent */
+            #twitch-import-form h2 { color: white; margin-bottom: 15px; }
+            #twitch-import-form label { display: block; margin-bottom: 5px; color: #eee; font-weight: bold;}
+            #twitch-import-form input[type="text"] { display: block; width: 100%; padding: 10px; margin-bottom: 15px; border: 1px solid #9400D3; background-color: rgba(0, 0, 0, 0.2); color: white; border-radius: 4px; }
+            #twitch-import-form button[type="submit"] { padding: 10px 25px; font-weight: 500; border: none; border-radius: 5px; background-color: #8A2BE2; color: white; cursor: pointer; transition: background-color 0.2s; margin-top: 15px; } /* Blauviolett */
+            #twitch-import-form button[type="submit"]:hover { background-color: #7B1FA2; } /* Dunkleres Lila */
+            #twitch-import-form p { font-size: smaller; color: #aaa; margin-top: 10px; }
+            /* ENDE NEUES STYLING */
+
             .messages { list-style: none; padding: 0; margin: 15px auto; max-width: 800px; text-align: center; }
             .messages li { padding: 10px 15px; margin-bottom: 10px; border-radius: 4px; font-size: 0.95em; }
             .messages li.success { background-color: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
@@ -31,24 +43,71 @@
             .messages li.info { background-color: #d1ecf1; color: #0c5460; border: 1px solid #bee5eb; }
             .messages li.warning { background-color: #fff3cd; color: #856404; border: 1px solid #ffeeba; }
 
-            /* Styling für Stop-Button */
-            .stop-recording-button {
+            .stop-recording-button { /* Beibehaltung des Original-Stylings für andere Buttons dieser Klasse */
                 background-color: #ffc107; color: #333; border: none;
                 padding: 3px 8px; border-radius: 4px; cursor: pointer; font-size: 0.8em;
-                margin-top: 5px; /* Abstand zum Video */
+                margin-top: 5px;
                 display: inline-block; font-weight: bold;
                 transition: background-color 0.2s;
             }
             .stop-recording-button:hover { background-color: #e0a800; }
 
-            /* Container für Video UND optionalen Stop-Button */
             .stream-entry {
-                /* Nimmt Platz im Flex-Layout der .line ein */
                 flex: 1 1 280px;
                 max-width: 300px;
                 text-align: center;
-                margin-bottom: 15px; /* Gesamtabstand des Eintrags nach unten */
+                margin-bottom: 15px;
             }
+
+            /* Styling für VOD-Liste */
+            .vod-import-button { /* Eigene Klasse für den Import-Button, falls abweichendes Styling gewünscht */
+                background-color: #28a745; color: white; border: none;
+                padding: 8px 15px; border-radius: 4px; cursor: pointer; font-size: 0.9em;
+                margin-top: 10px;
+                display: inline-block; font-weight: bold;
+                transition: background-color 0.2s;
+            }
+            .vod-import-button:hover { background-color: #218838; }
+
+            .vod-entry { /* Anpassung für die VOD-Karten */
+                flex: 1 1 300px; /* Etwas mehr Platz für Thumbnails */
+                max-width: 320px;
+                text-align: left; /* Text linksbündig in der Karte */
+                margin-bottom: 20px;
+                border: 1px solid #444;
+                padding: 15px;
+                border-radius: 8px;
+                background-color: rgba(255,255,255,0.03);
+                display: flex;
+                flex-direction: column; /* Stellt sicher, dass Button unten ist */
+                justify-content: space-between; /* Verteilt Platz, Button nach unten */
+            }
+            .vod-entry img {
+                width: 100%;
+                height: auto;
+                border-radius: 4px;
+                margin-bottom: 10px;
+            }
+            .vod-entry h4 {
+                font-size: 1em;
+                color: white;
+                margin-bottom: 8px;
+                height: 40px; /* Ca. 2 Zeilen */
+                overflow: hidden;
+                text-overflow: ellipsis;
+                display: -webkit-box;
+                -webkit-line-clamp: 2;
+                -webkit-box-orient: vertical;
+            }
+            .vod-entry p {
+                font-size: 0.85em;
+                color: #bbb;
+                margin-bottom: 4px;
+            }
+            .vod-entry .info-block {
+                 margin-bottom: 15px; /* Abstand vor dem Button */
+            }
+
         </style>
     </head>
     <body>
@@ -75,6 +134,55 @@
             <button type="submit">Aufnahme starten</button>
             <p>(Startet Aufnahme im Hintergrund. Kann manuell gestoppt werden.)</p>
         </form>
+
+        <hr style="margin: 40px 0;"> {# Trennlinie vor dem neuen Formular #}
+
+        <form id="twitch-import-form" method="post" action="{% url 'fetch_twitch_vods' %}"> {# ACHTUNG: URL Name muss in urls.py definiert werden #}
+            <h2>Twitch VODs importieren</h2>
+            {% csrf_token %}
+            <div>
+                <label for="id_twitch_channel_name">Twitch Kanalname:</label>
+                <input type="text" id="id_twitch_channel_name" name="twitch_channel_name" required placeholder="z.B. gronkh" value="{{ searched_channel_name|default:'' }}">
+            </div>
+            <button type="submit">VODs suchen</button>
+            <p>(Sucht nach den letzten aufgezeichneten Streams des Kanals.)</p>
+        </form>
+
+        {# Container für die Anzeige der gefundenen VODs #}
+        <div id="twitch-vod-list-container" style="margin-top: 30px;">
+            {% if twitch_vods %}
+                <h3 style="margin-bottom: 20px;">Gefundene VODs für Kanal "{{ searched_channel_name }}":</h3>
+                <div class="video_lines"> {# Wiederverwendung der .video_lines und .line Struktur #}
+                    {% for vod in twitch_vods %}
+                        {% if forloop.counter0|modulo:3 == 0 %} <div class="line"> {% endif %}
+                            <div class="vod-entry"> {# Eigene Klasse für besseres Styling der VOD Karte #}
+                                <img src="{{ vod.thumbnail_url }}" alt="VOD Thumbnail">
+                                <div class="info-block">
+                                    <h4 title="{{ vod.title }}">{{ vod.title }}</h4>
+                                    {# <p>ID: {{ vod.id }}</p> <p>Dauer: {{ vod.duration_formatted }}</p>
+                                    <p>Datum: {{ vod.created_at }}</p>
+                                    <p>Views: {{ vod.view_count|default:"N/A" }}</p>
+                                </div>
+                                <div> {# Extra Div für den Button, um ihn unten zu halten #}
+                                    <form action="{% url 'import_selected_twitch_vod' vod_id=vod.id %}" method="post" style="margin:0;"> {# ACHTUNG: URL Name muss in urls.py definiert werden #}
+                                        {% csrf_token %}
+                                        <input type="hidden" name="vod_title" value="{{ vod.title }}">
+                                        <input type="hidden" name="vod_url" value="{{ vod.url }}"> {# Die Twitch VOD URL, wichtig für Streamlink #}
+                                        <input type="hidden" name="twitch_channel_name" value="{{ searched_channel_name|default:'' }}"> {# Kanalname für Stream-Objekt #}
+                                        <button type="submit" class="vod-import-button">Dieses VOD importieren & analysieren</button>
+                                    </form>
+                                </div>
+                            </div>
+                        {% if forloop.counter|modulo:3 == 0 or forloop.last %} </div> {% endif %}
+                    {% endfor %}
+                </div>
+            {% elif search_attempted and not twitch_vods and searched_channel_name %}
+                <p style="margin-top:20px; color: orange;">Keine VODs für Kanal "{{ searched_channel_name }}" gefunden oder der Kanal existiert nicht. Bitte überprüfe den Kanalnamen.</p>
+            {% elif search_attempted and not searched_channel_name %}
+                 <p style="margin-top:20px; color: orange;">Bitte gib einen Twitch Kanalnamen ein.</p>
+            {% endif %}
+        </div>
+
 
         <hr style="margin-top: 40px;">
         <h2>Vorhandene Streams</h2>
@@ -107,3 +215,5 @@
 
 <footer class="footer"> <div class="container"> <div class="copyright">Copyright ©</div> </div> </footer>
 </div>
+</body>
+</html>
