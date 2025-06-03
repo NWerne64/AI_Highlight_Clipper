@@ -1,83 +1,81 @@
-/* webapp/static/styles/main.css */
-
-* {
-    margin: 0;
-    padding: 0;
-    box-sizing: border-box;
+.page {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
 }
 
-html {
-    height: 100%;
+.main,
+.footer,
+.site_header {
+  position: relative;
+  z-index: 2;
 }
 
-body {
-    /* Blauer Farbverlauf */
-    background: linear-gradient(50deg, #001f3f 20%, #0a2d50 49%, #007bff 71%);
-    font-family: 'Montserrat', sans-serif, Arial, Helvetica; /* Fallback Fonts hinzugefügt */
-    font-weight: 400;
-    font-size: 16px;
-    line-height: 1.7;
-    color: #f0f0f0; /* Helle Grundtextfarbe */
+html, body {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
 }
 
 .page {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+}
+body {
+    background: linear-gradient(135deg, #e8d4ff, #f3f0ff);
+    font-family: 'Lato', sans-serif;
+    font-weight: 400;
+    font-size: 16px;
+    line-height: 1.6;
     min-height: 100vh;
-    background: inherit;
-    position: relative;
-    padding-bottom: 70px; /* Platz für Footer */
-    display: flex; /* Flexbox für sticky footer */
+    display: flex;
     flex-direction: column;
 }
 
-main.main {
-    flex-grow: 1; /* Lässt den Main-Bereich wachsen */
+/* === Header === */
+.site_header {
+    width: 100%;
+    background: #6f42c1;
+    padding: 12px 30px;
+    position: fixed;
+    top: 0;
+    left: 0;
+    z-index: 999;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
 
-
-.header {
-    background-color: rgba(5, 5, 5, .6);
-    padding: 15px 0;
-    margin-bottom: 40px;
-    box-shadow: 0 2px 5px rgba(0,0,0,0.2);
-}
-
-.container {
-    max-width: 1100px;
+.header_content {
+    max-width: 1200px;
     margin: 0 auto;
-    padding: 0 15px;
-    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
 }
 
-.header_elements {
-   display: flex;
-    justify-content: space-between;
+.branding {
+    display: flex;
     align-items: center;
+}
+
+.header_logo {
+    height: 36px;
+    width: auto;
+    margin-right: 12px;
+}
+
+.header_title {
+    font-size: 22px;
+    font-weight: 700;
     color: white;
 }
 
-.Logo {
-    font-weight: 400;
-    font-size: 24px;
-    color: #FFFFFF;
-    text-decoration: none;
-}
-
-.header_elements a:first-child {
-     text-decoration: none;
-     color: inherit;
-}
-
-.Logo .span {
-    color: #4dabf7; /* Helles Blau */
-    font-weight: 700;
-    font-size: 28px;
-}
-
-/* User Menu Container im Header */
+/* User-Menü rechts */
 .user-menu {
     position: relative;
     cursor: pointer;
-    padding: 5px;
 }
 
 .user-info {
@@ -87,34 +85,26 @@ main.main {
     font-size: 15px;
 }
 
-.user { /* Das Icon neben dem Usernamen */
-    height: 20px;
-    width: auto;
-    margin-left: 8px;
-    vertical-align: middle;
+.user-info .user {
+    height: 22px;
+    margin-left: 10px;
+    filter: brightness(0) invert(1);
 }
 
-/* Das Logout-Popup, das beim Hover erscheint */
 .logout-popup {
-    display: none; /* Standardmäßig versteckt */
+    display: none;
     position: absolute;
     top: 100%;
     right: 0;
-    background-color: rgba(40, 40, 40, 0.95);
+    background-color: rgba(30, 30, 30, 0.95);
     border-radius: 4px;
     padding: 8px 0;
     z-index: 100;
-    min-width: 100px;
-    box-shadow: 0 3px 8px rgba(0,0,0,0.4);
-    text-align: center;
+    min-width: 120px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+    text-align: left;
 }
 
-/* Zeigt das Popup an, wenn über .user-menu gehovert wird */
-.user-menu:hover .logout-popup {
-    display: block;
-}
-
-/* Optional: Kleiner Pfeil über dem Popup */
 .logout-popup::before {
     content: '';
     position: absolute;
@@ -122,402 +112,788 @@ main.main {
     right: 15px;
     border-width: 6px;
     border-style: solid;
-    border-color: transparent transparent rgba(40, 40, 40, 0.95) transparent;
+    border-color: transparent transparent rgba(30, 30, 30, 0.95) transparent;
 }
 
-/* Styling für den Logout-Button im Popup */
-.logout-button {
+.user-menu:hover .logout-popup {
     display: block;
+}
+
+.logout-popup .control_panel {
+    display: block;
+    padding: 10px 15px;
+    color: white;
+    font-size: 14px;
+    text-decoration: none;
+    transition: background-color 0.2s;
+}
+
+.logout-popup .control_panel:hover {
+    background-color: #8a2be2;
+}
+
+
+.logout-button {
     width: 100%;
+    padding: 10px 15px;
     background: none;
     border: none;
-    padding: 6px 15px;
-    margin: 0;
-    color: #f0f0f0;
-    font-family: inherit;
+    color: white;
     font-size: 14px;
     text-align: left;
     cursor: pointer;
-    white-space: nowrap;
-    transition: background-color 0.2s, color 0.2s;
+    transition: background-color 0.2s;
 }
 
 .logout-button:hover {
-    background-color: #007bff;
-    color: white;
+    background-color: #8a2be2;
 }
 
-/* Control Panel Link (für Staff User) */
-.control_panel {
-    display: inline-block;
-    background-color: rgba(0, 0, 0, .2);
-    font-size: 12px;
-    color: #4dabf7;
-    text-decoration: none;
-    border: 1px solid #4dabf7;
-    padding: 5px 15px;
-    border-radius: 4px;
-    transition: all 0.2s;
-    margin-left: 20px; /* Beispiel Abstand */
+/* Abstand vom fixierten Header */
+main.main {
+    margin-top: 90px;
 }
 
-.control_panel:hover{
-    background-color: #e7f5ff;
-    border: 1px solid #007bff;
-    color: #0056b3;
+/* === Upload-Formular Styling === */
+#upload-form {
+    background: #f1eef9; /* hell-lila Hintergrund */
+    border: 1px solid #6f42c1;
+    max-width: 1000px;
+    margin: 0 auto 40px;
+    padding: 25px 30px;
+    border-radius: 10px;
+    box-shadow: 0 4px 10px rgba(111, 66, 193, 0.1);
+    transition: box-shadow 0.3s ease;
 }
 
-/* Upload Form Styling */
-main form#upload-form { /* Spezifischer Selektor, falls ID gesetzt */
-    background-color: rgba(255, 255, 255, 0.1);
-    padding: 20px;
-    border-radius: 8px;
-    margin-bottom: 40px;
+#upload-form:hover {
+    box-shadow: 0 6px 16px rgba(111, 66, 193, 0.15);
 }
 
-main form#upload-form h2 {
-    color: white;
-    margin-bottom: 15px;
+#upload-form h2 {
+    color: #6f42c1;
+    font-size: 22px;
+    font-weight: 700;
+    margin-bottom: 20px;
 }
 
-main form#upload-form input[type="text"],
-main form#upload-form input[type="file"] {
+#upload-form label {
+    font-weight: 600;
+    color: #333;
+    margin-bottom: 6px;
     display: block;
-    width: 100%;
-    padding: 10px;
-    margin-bottom: 15px;
-    border: 1px solid #007bff;
-    background-color: rgba(0, 0, 0, 0.2);
-    color: white;
-    border-radius: 4px;
 }
 
-main form#upload-form input[type="file"]::file-selector-button {
+.form_selector h2 {
+  color: black;
+  text-align: center;
+  font-size: 2rem;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.15);
+}
+
+.main h2 {
+    color: black;
+  text-align: center;
+  font-size: 2rem;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.15);
+}
+
+.main h3 {
+    color: black;
+  text-align: center;
+  font-size: 2rem;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.15);
+}
+
+#upload-form input[type="text"],
+#upload-form input[type="file"] {
+    width: 100%;
+    max-width: 100%;
+    padding: 12px;
+    margin-bottom: 20px;
+    border: 1px solid #ccc;
+    background: white;
+    border-radius: 6px;
+    font-size: 15px;
+    color: #333;
+    transition: border-color 0.3s, box-shadow 0.3s;
+}
+
+#upload-form input[type="text"]:focus,
+#upload-form input[type="file"]:focus {
+    border-color: #6f42c1;
+    box-shadow: 0 0 0 3px rgba(111, 66, 193, 0.2);
+    outline: none;
+}
+
+#upload-form input[type="file"]::file-selector-button {
+    background-color: #6f42c1;
+    color: white;
+    border: none;
+    padding: 10px 16px;
+    border-radius: 6px;
+    cursor: pointer;
+    margin-right: 10px;
+    font-weight: 500;
+    transition: background-color 0.2s;
+}
+
+#upload-form input[type="file"]::file-selector-button:hover {
+    background-color: #5a32a3;
+}
+
+#upload-form button[type="submit"] {
+    background-color: #6f42c1;
+    color: white;
+    padding: 12px 28px;
+    border: none;
+    border-radius: 6px;
+    font-size: 16px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+#upload-form button[type="submit"]:hover {
+    background-color: #5a32a3;
+}
+
+/* === Twitch Stream aufnehmen Formular === */
+#record-form {
+    background: #f1eef9; /* noch helleres Lila */
+    border: 1px solid #6f42c1;
+    max-width: 1000px;
+    margin: 0 auto 40px;
+    padding: 25px 30px;
+    border-radius: 10px;
+}
+
+#record-form h2 {
+    color: #6f42c1;
+    font-size: 20px;
+    font-weight: 700;
+    margin-bottom: 20px;
+}
+
+#record-form label {
+    font-weight: 600;
+    color: #333;
+    display: block;
+    margin-bottom: 6px;
+}
+
+#record-form input[type="text"] {
+    width: 100%;
+    padding: 12px;
+    margin-bottom: 20px;
+    border: 1px solid #ccc;
+    border-radius: 6px;
+    background: #fff;
+    font-size: 15px;
+    color: #333;
+    transition: border-color 0.3s, box-shadow 0.3s;
+}
+
+#record-form input[type="text"]:focus {
+    border-color: #6f42c1;
+    box-shadow: 0 0 0 3px rgba(111, 66, 193, 0.2);
+    outline: none;
+}
+
+#record-form button {
+    background-color: #6f42c1;
+    color: white;
+    padding: 12px 28px;
+    border: none;
+    border-radius: 6px;
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+#record-form button:hover {
+    background-color: #5a32a3;
+}
+
+#record-form p {
+    font-size: 14px;
+    color: #777;
+    margin-top: 10px;
+}
+
+/* === Twitch VODs importieren Formular === */
+#twitch-import-form {
+    background: #eff4fc; /* leicht bläulicher Hintergrund */
+    border: 1px dashed #4dabf7;
+    max-width: 1000px;
+    margin: 0 auto 40px;
+    padding: 25px 30px;
+    border-radius: 10px;
+}
+
+#twitch-import-form h2 {
+    color: #007bff;
+    font-size: 20px;
+    font-weight: 700;
+    margin-bottom: 20px;
+}
+
+#twitch-import-form label {
+    font-weight: 600;
+    color: #333;
+    display: block;
+    margin-bottom: 6px;
+}
+
+#twitch-import-form input[type="text"] {
+    width: 100%;
+    padding: 12px;
+    margin-bottom: 20px;
+    border: 1px solid #ccc;
+    border-radius: 6px;
+    background: #fff;
+    font-size: 15px;
+    color: #333;
+    transition: border-color 0.3s, box-shadow 0.3s;
+}
+
+#twitch-import-form input[type="text"]:focus {
+    border-color: #007bff;
+    box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.2);
+    outline: none;
+}
+
+.vod-grid {
+    display: grid;
+    padding: 0 30px;
+    grid-template-columns: repeat(4, 1fr); /* 4 Spalten */
+    gap: 20px;
+    justify-content: center; /* wichtig: mittig ausrichten */
+    margin: 0 auto 40px auto; /* optional: unten Abstand + zentrieren */
+    max-width: 1200px; /* optional: max. Breite für große Bildschirme */
+}
+
+.option_card {
+  background: white;
+  border: none;
+  padding: 20px 30px;
+  border-radius: 12px;
+  color: #6f42c1;
+  font-weight: 700;
+  font-size: 16px;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.08);
+  transition: all 0.3s ease;
+}
+
+.option_card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 12px 24px rgba(0, 0, 0, 0.12);
+}
+
+
+#twitch-import-form button {
     background-color: #007bff;
     color: white;
+    padding: 12px 28px;
+    border: none;
+    border-radius: 6px;
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+#twitch-import-form button:hover {
+    background-color: #0056b3;
+}
+
+#twitch-import-form p {
+    font-size: 14px;
+    color: #777;
+    margin-top: 10px;
+}
+
+/* === Twitch VOD-Eintrag Styling === */
+.vod-entry {
+    width: 300px;
+    background: white;
+    border: 1px solid #e0e0e0;
+    border-radius: 10px;
+    overflow: hidden;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.05);
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.vod-entry:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 6px 15px rgba(0,0,0,0.1);
+}
+
+.vod-entry img {
+    width: 100%;
+    height: auto;
+    object-fit: cover;
+    display: block;
+}
+
+.vod-entry .info-block {
+    padding: 12px 15px 0 15px;
+    flex-grow: 1;
+}
+
+.vod-entry h4 {
+    font-size: 16px;
+    font-weight: 600;
+    margin: 0 0 10px 0;
+    color: #333;
+    line-height: 1.3;
+    max-height: 42px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.vod-entry p {
+    font-size: 13px;
+    color: #666;
+    margin: 4px 0;
+}
+
+/* Import Button unter der Info */
+.vod-entry form {
+    padding: 10px 15px 15px 15px;
+}
+
+.vod-import-button {
+    width: 100%;
+    background-color: #4dabf7;
+    color: white;
+    border: none;
+    padding: 10px;
+    border-radius: 6px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background-color 0.2s ease-in-out;
+}
+
+.vod-import-button:hover {
+    background-color: #228be6;
+}
+
+/* === Stream-Einträge === */
+.stream-entry {
+    flex: 1 1 300px;
+    max-width: 300px;
+    text-align: center;
+    background: white;
+    border: 1px solid #ddd;
+    border-radius: 10px;
+    overflow: hidden;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.06);
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+}
+
+.stream-entry:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 6px 16px rgba(0,0,0,0.1);
+}
+
+/* Video Block */
+.video_lines {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 20px;
+  justify-content: center;
+  padding: 0 30px;
+  max-width: 1200px;
+  margin: 0 auto 40px auto;
+}
+
+
+.video {
+    width: 100%;
+    aspect-ratio: 16 / 9;
+    position: relative;
+    border-bottom: 1px solid #eee;
+}
+
+/* Overlay-Buttons: Play / Delete */
+.video-overlay-button {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: none;
+    cursor: pointer;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.2s ease-in-out;
+    z-index: 2;
+}
+
+.video:hover .video-overlay-button {
+    opacity: 1;
+    visibility: visible;
+}
+
+.play-button {
+    left: 15px;
+    width: 50px;
+    height: auto;
+    align-content: center;
+}
+
+.play-button img {
+    height: 25px;
+    width: auto;
+}
+
+.play-button:hover {
+    background-color: rgba(0, 123, 255, 0.8);
+}
+
+.delete-form {
+    right: 15px;
+    width: 45px;
+    height: 45px;
+    background: none !important;
+    padding: 0;
+    margin: 0;
+    box-shadow: none;
+    border: none;
+    background-color: rgba(200, 0, 0, 0.6);
+}
+
+
+.delete-form:hover {
+    background-color: rgba(255, 0, 0, 0.8);
+}
+
+.delete-button-overlay {
+    background: none !important;
+    border: none !important;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.delete-button-overlay img {
+    height: 22px;
+    width: 22px;
+}
+
+
+/* Titel im Video */
+.text_video {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    background: #6f42c1;
+    padding: 10px;
+    font-size: 13px;
+    color: #fff;
+    text-align: center;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    border-bottom-left-radius: 10px;
+    border-bottom-right-radius: 10px;
+}
+
+
+/* Aufnahme-Stop Button */
+.stop-recording-button {
+    background-color: #ffc107;
+    color: #333;
     border: none;
     padding: 8px 12px;
     border-radius: 4px;
     cursor: pointer;
-    margin-right: 10px;
-}
-main form#upload-form input[type="file"]::file-selector-button:hover {
-    background-color: #0056b3;
-}
-
-main form#upload-form button[type="submit"] {
-    padding: 10px 25px;
-    font-weight: 500;
-    border: none;
-    border-radius: 5px;
-    background-color: #007bff;
-    color: white;
-    cursor: pointer;
-    transition: background-color 0.2s;
-}
-main form#upload-form button[type="submit"]:hover {
-     background-color: #0056b3;
-}
-
-
-.video_lines {
-    display: block;
-    width: auto;
-    margin-top: 30px;
-}
-
-.line {
-   display: flex;
-   flex-wrap: wrap;
-   /* justify-content: space-between; */ /* Oder space-around, oder flex-start */
-   justify-content: flex-start; /* Startet links */
-   gap: 20px; /* Abstand zwischen den stream-entry Blöcken */
-   margin-bottom: 20px;
-}
-
-/* NEU: Wrapper für ein Stream-Element (Video + Stop-Button) */
-.stream-entry {
-    flex: 1 1 280px; /* Nimmt Platz im Flex-Layout der .line ein */
-    max-width: 300px;
-    text-align: center; /* Zentriert den Stop-Button darunter */
-    margin-bottom: 15px; /* Gesamtabstand des Eintrags nach unten */
-}
-
-/* Video-Container ANPASSEN */
-.video { /* video-hover-container Klasse ist optional */
-    display: block; /* Nimmt volle Breite von stream-entry ein */
-    width: 100%; /* Nimmt volle Breite von stream-entry ein */
-    aspect-ratio: 16 / 9;
-    background-color: rgba(0, 0, 0, .7);
-    border-radius: 8px;
-    overflow: hidden;
-    position: relative; /* WICHTIG für Overlays */
-    cursor: default;
-    transition: transform 0.2s ease-in-out;
-    /* margin-bottom NICHT hier, wird von stream-entry gesteuert */
-}
-
-.video:hover {
-    transform: scale(1.03);
-}
-
-/* Optional: Hintergrundbild für Video-Container */
-.video-background-image {
-    position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-    object-fit: cover; z-index: 1; opacity: 0.5;
-}
-
-/* --- Regeln für Hover-Buttons (Play/Delete) --- */
-.video-overlay-button {
-    position: absolute; top: 50%; transform: translateY(-50%);
-    background-color: rgba(0, 0, 0, 0.6); border-radius: 50%; display: flex;
-    align-items: center; justify-content: center; border: none;
-    cursor: pointer; z-index: 2; opacity: 0; visibility: hidden;
-    transition: opacity 0.2s ease-in-out, visibility 0s linear 0.2s;
-}
-.play-button { left: 15px; width: 50px; height: 50px; padding: 10px; }
-.play-button img { height: 25px; width: auto; display: block; }
-.play-button:hover { background-color: rgba(0, 123, 255, 0.8); }
-.delete-form { right: 15px; width: 45px; height: 45px; background-color: rgba(200, 0, 0, 0.6); padding: 0; }
-.delete-button-overlay { background: none; border: none; padding: 0; margin: 0; display: flex; align-items: center; justify-content: center; width: 100%; height: 100%; cursor: pointer; }
-.delete-button-overlay img { height: 18px; width: auto; filter: brightness(0) invert(1); }
-.delete-form:hover { background-color: rgba(255, 0, 0, 0.8); }
-.video:hover .video-overlay-button { opacity: 1; visibility: visible; transition: opacity 0.2s ease-in-out; }
-/* --- Ende Hover-Buttons --- */
-
-/* Video-Titel unten */
-.text_video {
-    position: absolute; bottom: 0px; left: 0; right: 0; color: #FFF; font-size: 13px;
-    background: linear-gradient(to top, rgba(0,0,0,0.9) 0%, rgba(0,0,0,0) 100%);
-    padding: 20px 10px 8px 10px; text-align: center; white-space: nowrap;
-    overflow: hidden; text-overflow: ellipsis; z-index: 1;
-}
-
-/* Styling für Stop-Button unterhalb des Videos */
-.stop-recording-button {
-    background-color: #ffc107; color: #333; border: none;
-    padding: 4px 10px; border-radius: 4px; cursor: pointer;
-    font-size: 0.85em; /* Etwas größer */
-    margin-top: 8px; /* Abstand zum Video-Block */
-    display: inline-block; font-weight: bold;
-    transition: background-color 0.2s;
-}
-.stop-recording-button:hover { background-color: #e0a800; }
-
-
-/* Footer */
-.footer {
-    position: absolute; /* Stellt sicher, dass er unten ist, wenn .page nicht voll */
-    left: 0;
-    bottom: 0;
-    width: 100%;
-    height: 50px; /* Feste Höhe */
-    background-color: rgba(5, 5, 5, .7);
-    text-align: center;
-    margin-top: auto; /* Schiebt Footer nach unten im Flex-Container .page */
-}
-
-.copyright {
-    color: #a0a0a0;
-    font-size: 14px;
-    line-height: 50px; /* Vertikal zentrieren in fester Höhe */
-}
-
-/* Stile für stream.html (Top Elements) */
-/* .main Selektor gilt auch hier */
-
-.top_elements{
-    display: flex;
-    max-width: 550px;
-    margin: 0 auto 30px auto;
-    align-items: center;
-    justify-content: space-between;
-    gap: 15px;
-}
-
-.heading {
-    display: block;
-    color: #FFF;
-    font-weight: 700;
-    font-size: 20px;
-    margin-right: auto;
-}
-.download { /* Delete-Button Container auf stream.html */
-    display: block;
-    height: 40px;
-    background-color: rgba(0, 0, 0, .4);
-    border: 1px solid #a0a0a0;
-    padding: 5px 15px;
-    border-radius: 4px;
-    line-height: 30px;
-    transition: all 0.2s;
-}
-.download a.download_btn {
-    display: inline-block;
-    vertical-align: middle;
-}
-
-.download_img{
-    width: 20px;
-    height: 20px;
-    vertical-align: middle;
-}
-
-.download:hover{
-    border: 1px solid #007bff;
-    background-color: rgba(0, 123, 255, 0.1);
-}
-
-.stop_btn {
-    display: block;
-    height: 40px;
-    text-align: center;
-    background-color: rgba(0, 0, 0, .4);
-    font-size: 12px;
-    color: white;
-    text-decoration: none;
-    border: 1px solid #a0a0a0;
-    padding: 5px 20px;
-    border-radius: 4px;
-    line-height: 30px;
-    transition: all 0.2s;
-    white-space: nowrap;
-}
-
-.stop_btn:hover{
-    border: 1px solid #4dabf7;
-    color: #4dabf7;
-    background-color: rgba(77, 171, 247, 0.1);
-}
-
-
-/* Stile für stream.html (Slider) */
-.wrapper {
-    margin-bottom: 50px;
-}
-
-.slider_big{
-     margin-bottom: 20px;
-     background-color: rgba(0, 0, 0, 0.3);
-     padding: 10px;
-     border-radius: 5px;
-}
-.sliderbig_item video {
-    display: block;
-    margin: 0 auto;
-    max-width: 100%;
-    height: auto;
-    max-height: 60vh;
-    border-radius: 4px;
-}
-
-.slider {
-    position: relative;
-    padding: 0 50px;
-    border: none;
-}
-
-.slick-list {
-    overflow: hidden;
-    margin: 0 auto;
-    max-width: 90%;
-}
-
-.slick-track{
-    display: flex;
-    align-items: center;
-}
-
-.slider_item {
-    padding: 0 5px;
-    cursor: pointer;
-}
-.slider_item video {
-    display: block;
-    width: 100%;
-    height: auto;
-    max-height: 120px;
-    border-radius: 4px;
-    border: 2px solid transparent;
-    transition: border-color 0.2s;
-}
-.slider_item:focus {
-    outline: none;
-}
-
-.slick-current .slider_item video {
-    border: 2px solid #007bff; /* Blauer Rand für aktives Thumbnail */
-}
-
-.slider .slick-arrow{
-    position: absolute;
-    top: 50%;
-    transform: translateY(-50%);
-    z-index: 10;
-    font-size: 0px;
-    width: 30px;
-    height: 50px;
-    border: none;
-    cursor: pointer;
-    opacity: 0.7;
-    transition: opacity 0.2s;
-}
-.slider .slick-arrow:hover {
-    opacity: 1;
-}
-
-.slick-arrow.slick-prev{
-    left: 10px;
-    background: url('../images/previous.png') center center / 60% no-repeat;
-    background-color: rgba(0, 0, 0, 0.3);
-    border-radius: 4px 0 0 4px;
-}
-
-.slick-arrow.slick-prev:focus{
-    outline: none;
-}
-
-.slick-arrow.slick-next{
-    right: 10px;
-    background: url('../images/next.png') center center / 60% no-repeat;
-    background-color: rgba(0, 0, 0, 0.3);
-    border-radius: 0 4px 4px 0;
-}
-
-.slick-arrow.slick-next:focus{
-    outline: none;
-}
-
-/* --- Styles für User-Menü (Logout) --- */
-/* (Dieser Block sollte nur einmal existieren) */
-.user-menu {
-    position: relative;
-    cursor: pointer;
-    padding: 5px;
-}
-
-/* ... (Rest der User-Menu/Logout Styles wie zuvor) ... */
-.user-info { display: flex; align-items: center; color: white; }
-.logout-popup { display: none; position: absolute; top: 100%; right: 0; background-color: rgba(40, 40, 40, 0.95); border-radius: 4px; padding: 8px 0; z-index: 100; min-width: 100px; box-shadow: 0 3px 8px rgba(0,0,0,0.4); text-align: center; }
-.user-menu:hover .logout-popup { display: block; }
-.logout-popup::before { content: ''; position: absolute; bottom: 100%; right: 15px; border-width: 6px; border-style: solid; border-color: transparent transparent rgba(40, 40, 40, 0.95) transparent; }
-.logout-button { display: block; width: 100%; background: none; border: none; padding: 6px 15px; margin: 0; color: #f0f0f0; font-family: inherit; font-size: 14px; text-align: left; cursor: pointer; white-space: nowrap; transition: background-color 0.2s, color 0.2s; }
-.logout-button:hover { background-color: #007bff; color: white; }
-
-/* Styling für Stop-Button unterhalb des Videos */
-.stop-recording-button {
-    background-color: #ffc107; /* Gelb/Orange */
-    color: #333; /* Dunkler Text */
-    border: none;
-    padding: 4px 10px; /* Etwas größer */
-    border-radius: 4px;
-    cursor: pointer;
-    font-size: 0.85em; /* Kleinere Schrift */
-    margin-top: 8px; /* Abstand zum Video */
+    font-size: 0.9em;
+    margin: 12px auto 16px auto;
     display: inline-block;
     font-weight: bold;
     transition: background-color 0.2s;
 }
+
 .stop-recording-button:hover {
-    background-color: #e0a800; /* Dunkleres Gelb/Orange */
+    background-color: #e0a800;
 }
+
+/* === Footer === */
+.footer {
+    width: 100%;
+    background-color: #6f42c1;
+    height: 60px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-top: 1px solid #333;
+    box-shadow: 0 -1px 5px rgba(0,0,0,0.2);
+    flex-shrink: 0;
+    margin-top: auto;
+}
+
+.footer .copyright {
+    font-size: 14px;
+    color: white;
+    letter-spacing: 0.3px;
+    text-align: center;
+}
+
+/* === Kompakter Video Player === */
+.video-container {
+    background: #f5f2fc;
+    border: 1px solid #d3c4f0;
+    padding: 16px;
+    border-radius: 10px;
+    box-shadow: 0 3px 8px rgba(111, 66, 193, 0.08);
+    max-width: 600px;
+    margin: 0 auto;
+}
+
+.video-container video {
+    width: 100%;
+    max-height: 45vh;
+    border-radius: 6px;
+    background: black;
+    box-shadow: 0 3px 8px rgba(0, 0, 0, 0.12);
+}
+
+
+/* Highlight / Fehler-Meldungen */
+#error-message,
+.error-message {
+    color: #c0392b;
+    font-weight: 600;
+    margin-top: 10px;
+    text-align: center;
+}
+
+#highlight-status p {
+    font-size: 15px;
+    text-align: center;
+    margin-top: 15px;
+    font-weight: 500;
+}
+
+/* Generator-Buttons - zentriert */
+.video-container form,
+.video-container a.generator-button {
+    display: inline-block;
+    margin: 10px 8px;
+    text-align: center;
+}
+
+.video-container div[style*="margin-top: 20px"] {
+    text-align: center;
+    margin-top: 30px;
+}
+
+.generator-button {
+    background-color: #6f42c1;
+    color: white;
+    padding: 12px 24px;
+    border-radius: 6px;
+    border: none;
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+    text-decoration: none;
+}
+
+.generator-button:hover {
+    background-color: #5a32a3;
+}
+
+/* Rück-Link – wie Button */
+a[href*="index"] {
+    display: inline-block;
+    background-color: #6f42c1;
+    color: white;
+    padding: 10px 20px;
+    border-radius: 6px;
+    font-size: 14px;
+    font-weight: 600;
+    text-decoration: none;
+    margin-top: 30px;
+    transition: background-color 0.2s ease;
+}
+
+a[href*="index"]:hover {
+    background-color: #5a32a3;
+}
+
+
+/* === Highlight Generator Box === */
+.stats-box {
+    background-color: #f5f2fc;
+    border: 1px solid #d3c4f0;
+    padding: 25px 30px;
+    border-radius: 12px;
+    max-width: 900px;
+    margin: 0 auto 30px;
+    box-shadow: 0 4px 12px rgba(111, 66, 193, 0.08);
+    line-height: 1.8;
+}
+
+.stats-box p {
+    margin: 10px 0;
+    font-size: 15px;
+}
+
+.status-complete {
+    color: #28a745;
+    font-weight: bold;
+}
+.status-error {
+    color: red;
+    font-weight: bold;
+}
+.status-processing,
+.status-pending {
+    color: #ffc107;
+    font-weight: bold;
+}
+
+/* === Regenerate Button / Input === */
+.regenerate-section {
+    margin-top: 20px;
+    text-align: center;
+}
+
+.regenerate-section label {
+    display: block;
+    margin-bottom: 8px;
+    font-weight: 600;
+}
+
+.regenerate-section input[type="number"] {
+    padding: 10px;
+    border: 1px solid #ccc;
+    border-radius: 6px;
+    font-size: 15px;
+    width: 180px;
+    margin-bottom: 10px;
+}
+
+.regenerate-button {
+    background-color: #6f42c1;
+    color: white;
+    padding: 10px 20px;
+    border: none;
+    border-radius: 6px;
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+    margin-top: 8px;
+}
+
+.regenerate-button:hover {
+    background-color: #5a32a3;
+}
+
+/* === Highlight Clips Grid === */
+.highlight-grid {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 25px;
+    max-width: 1200px;
+    margin: 0 auto;
+}
+
+.highlight-item {
+    background: white;
+    border: 1px solid #ddd;
+    border-radius: 10px;
+    padding: 15px;
+    width: 300px;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.05);
+    text-align: center;
+}
+
+.highlight-item video {
+    width: 100%;
+    border-radius: 6px;
+    margin-bottom: 10px;
+}
+
+.highlight-item p {
+    font-size: 14px;
+    margin: 6px 0;
+}
+
+/* === Keine Highlights === */
+.no-highlights {
+    text-align: center;
+    font-size: 16px;
+    color: #555;
+    margin: 30px auto;
+}
+
+/* === Zurück Links === */
+.container > div:last-child {
+    text-align: center;
+}
+
+.container a {
+    display: inline-block;
+    background-color: #6f42c1;
+    color: white;
+    padding: 10px 18px;
+    border-radius: 6px;
+    font-size: 14px;
+    font-weight: 600;
+    text-decoration: none;
+    transition: background-color 0.2s ease;
+}
+
+.container a:hover {
+    background-color: #5a32a3;
+}
+
+
+/* === Kleine Übergangsanimationen === */
+button,
+input[type="text"],
+input[type="file"],
+.form-entry,
+.stream-entry,
+.control_panel,
+.logout-button,
+.video-overlay-button {
+    transition: all 0.2s ease-in-out;
+}
+
+/* === Allgemeine FadeIn Animation (z.B. beim Laden oder Wechsel) === */
+.fade-in {
+    animation: fadeIn 0.4s ease forwards;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+

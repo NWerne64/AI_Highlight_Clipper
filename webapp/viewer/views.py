@@ -85,6 +85,16 @@ def index(request):
                               {'form': reg_form_posted})
     if request.user.is_authenticated:
         stream_data = Stream.objects.filter(user_id=request.user.username).order_by('-id')
+        # VIDEO-URL zum Stream-Objekt hinzufügen
+        for stream in stream_data:
+            if stream.video_file and stream.video_file.name:
+                absolute_path = os.path.join(settings.MEDIA_ROOT, stream.video_file.name)
+                if os.path.exists(absolute_path):
+                    stream.video_url = os.path.join(settings.MEDIA_URL, stream.video_file.name).replace('\\', '/')
+                else:
+                    stream.video_url = None
+            else:
+                stream.video_url = None
         upload_form = StreamUploadForm()
         response_data = {
             "stream_data": stream_data,
@@ -1118,8 +1128,6 @@ def fetch_twitch_vods_view(request):
             if fetched_vods_data:
                 print(f"[Fetch VODs View] {len(fetched_vods_data)} VODs gefunden.")
                 twitch_vods_results = fetched_vods_data  # Ergebnisse für Template
-                messages.success(request,
-                                 f"{len(fetched_vods_data)} VODs für '{searched_channel_name_input}' gefunden.")
             else:
                 print(
                     f"[Fetch VODs View] Keine VODs für {searched_channel_name_input} (User ID: {user_id_from_twitch}).")

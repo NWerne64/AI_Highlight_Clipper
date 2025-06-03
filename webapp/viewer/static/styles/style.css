@@ -1,161 +1,194 @@
 * {
-    margin: 0;
-    padding: 0;
-    box-sizing: border-box;
+  box-sizing: border-box;
 }
 
-html {
-    height: 100%;
+/* === Fixed Header oben === */
+.site_header {
+    width: 100%;
+    background-color: #6f42c1;
+    border-bottom: 1px solid #6f42c1;
+    padding: 10px 30px;
+    position: fixed;
+    top: 0;
+    left: 0;
+    z-index: 1000;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.03);
 }
+
+.header_content {
+    display: flex;
+    align-items: center;
+    max-width: 1200px;
+    margin: 0 auto;
+}
+
+.header_logo {
+    height: 36px;
+    width: auto;
+    margin-right: 12px;
+}
+
+.header_title {
+    font-size: 20px;
+    font-weight: 600;
+    color: white;
+}
+
+/* Abstand unten für Login-Box, weil Header fixiert ist */
+.form_page {
+    margin-top: 80px; /* ↑ mehr Platz damit nichts überlappt */
+}
+
 
 body {
-    /* Blauer Farbverlauf */
-    background: linear-gradient(50deg, #001f3f 20%, #0a2d50 49%, #007bff 71%);
-    font-family: 'Montserrat', sans-serif;
+    background: #f3f0ff;
+    font-family: 'Lato', sans-serif;
     font-weight: 400;
     font-size: 16px;
-    line-height: 1.7;
-    height: 100%; /* hinzugefügt für body, falls benötigt */
+    line-height: 1.6;
+    color: #333;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 100vh;
 }
 
 .form_page {
-    position: relative;
-    height: 100vh;
+    width: 100%;
     text-align: center;
-    /* Optional: Textfarbe auf Body setzen, wenn nicht alles überschrieben wird */
-    /* color: white; */
-}
-
-.form_tittle{
-    font-weight: 400;
-    font-size: 20px;
-    color: white;
-    /* margin-top: -50px; /* War vielleicht für alte Struktur? Anpassen bei Bedarf */
-    padding-top: 50px; /* Etwas Abstand oben */
-    padding-bottom: 30px;
-}
-
-.span {
-    /* Helles Blau als Akzent */
-    color: #4dabf7;
-    font-weight: 700;
-    font-size: 24px;
 }
 
 .form_inner {
-    /* Höhe ggf. anpassen oder entfernen */
-    /* height: 500px; */
-    display: inline-block; /* Zentriert die Formulare besser */
-    vertical-align: middle; /* Vertikal zentrieren, erfordert ggf. Anpassung am Parent */
-    padding-top: 5%; /* Etwas Abstand oben, Alternative zu margin-top */
+    display: inline-block;
+    padding: 0;
 }
 
-/* Positionierung der Formulare angepasst */
 form {
-    /* position: absolute;
-    top: 50%;
-    left: 50%;
-    margin-top: -180px;
-    margin-left: -300px; */ /* Absolute Positionierung entfernt */
-
-    width: 450px; /* Etwas schmaler gemacht */
-    padding: 50px; /* Weniger Padding oben */
-    background-color: rgba(19, 19, 19, .5); /* Dunkler Hintergrund, etwas transparenter */
-    display: inline-block; /* Damit es innerhalb von form_inner bleibt */
-    border-radius: 10px; /* Abgerundete Ecken */
-    margin: 20px; /* Abstand zwischen Forms, falls beide sichtbar wären */
+    width: 400px;
+    padding: 40px;
+    background-color: white;
+    border-radius: 12px;
+    border: 2px solid #6f42c1;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.05);
+    transition: box-shadow 0.3s;
+    animation: fadeIn 0.3s ease; /* 👈 Animation */
 }
 
+form:hover {
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
+}
+
+/* === Header mit Logo, Marke und Titel === */
+.form_header {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    margin-bottom: 20px;
+}
+
+.form_logo {
+    width: 300px;
+    height: auto;
+}
+
+.form_brand {
+    font-size: 22px;
+    font-weight: 700;
+    color: #6f42c1;
+    margin: 0;
+}
+
+.form_tittle {
+    font-size: 24px;
+    font-weight: 700;
+    color: #6f42c1;
+    margin: 4px 0 0 0;
+}
+
+/* === Inputs === */
 input {
     display: block;
-    font-family: inherit;
-    margin-bottom: 15px; /* Mehr Abstand */
-    padding: 10px; /* Padding hinzugefügt */
-    width: 100%; /* Volle Breite des Formular-Paddings nutzen */
-    /* Blauer Rahmen */
-    border: 1px solid #007bff;
-    border-radius: 5px; /* Kleinere Rundung */
-    background: none;
-    color: #FFF; /* Weiße Schrift */
+    width: 100%;
+    padding: 12px;
+    margin-bottom: 20px;
+    border: 1px solid #ccc;
+    border-radius: 6px;
+    background-color: #fdfdff;
+    font-size: 15px;
+    transition: border-color 0.3s, box-shadow 0.3s;
+    color: #333;
 }
 
 input:focus {
     outline: none;
-    /* Hellerer blauer Fokus-Rahmen */
-    border: 1px solid #4dabf7;
-    border-radius: 5px;
-    background-color: rgba(255, 255, 255, 0.1); /* Leichter Hintergrund bei Fokus */
+    border-color: #9f7aea;
+    box-shadow: 0 0 0 3px rgba(159, 122, 234, 0.2);
+    background-color: #fff;
 }
 
-::placeholder { /* Chrome, Firefox, Opera, Safari 10.1+ */
-  color: #FFF;
-  opacity: .6; /* Etwas weniger transparent */
+::placeholder {
+    color: #aaa;
     font-style: italic;
-    font-size: 12px;
 }
 
-:-ms-input-placeholder { /* Internet Explorer 10-11 */
-    color: #FFF;
-    opacity: .6;
-}
-
-::-ms-input-placeholder { /* Microsoft Edge */
-    color: #FFF;
-    opacity: .6;
-}
-
+/* === Button === */
 .btn_form {
-    padding: 10px 50px;
-    margin-top: 20px;
-    font-weight: 500;
-    border: none;
-    border-radius: 5px;
-    background-color: #007bff; /* Mittelblau als Standard */
+    background-color: #6f42c1;
     color: white;
+    padding: 12px 40px;
+    border: none;
+    border-radius: 6px;
     cursor: pointer;
+    font-size: 16px;
+    font-weight: 500;
     transition: background-color 0.2s;
 }
 
-.btn_form:hover{
-    /* Dunkleres Blau im Hover */
-    background-color: #0056b3;
-    color: white;
+.btn_form:hover {
+    background-color: #5a32a3;
 }
 
+/* === Link / Label unter Button === */
 label {
     display: block;
-    cursor: pointer;
-    color: #a0a0a0; /* Helleres Grau */
-    padding-top: 15px; /* Mehr Abstand */
+    margin-top: 20px;
+    color: #6f42c1;
     font-size: 14px;
+    cursor: pointer;
     transition: color 0.2s;
 }
 
-label:hover{
-    color: white;
+label:hover {
     text-decoration: underline;
+    color: #5a32a3;
 }
 
-/* Switcher Logik bleibt gleich */
+/* === Form Switch Toggle === */
 #form-switch {
-  display:none
-}
-#register-form {
-  display:none
-}
-#form-switch:checked~#register-form {
-  display:block
-}
-#form-switch:checked~#login-form {
-  display:none
+    display: none;
 }
 
-/* Stile aus main.css, die hier evtl. stören könnten (falls main.css global geladen wird) */
-/* Entferne oder kommentiere sie aus, wenn sie Konflikte verursachen */
-/* .page, .header, .container, .header_elements, .Logo, .header_user, .user, */
-/* .search-box, .search-txt, .img-search, .search-btn, */
-/* .video_lines, .line, .video, .play, .text_video, */
-/* .footer, .copyright, .main, .top_elements, .heading, .download, .download_img, .stop_btn */
-/* { */
-    /* Diese Stile sollten nur in main.css sein */
-/* } */
+#register-form {
+    display: none;
+}
+
+#form-switch:checked ~ #register-form {
+    display: block;
+    animation: fadeIn 0.3s ease; /* 👈 Animation beim Sichtbarwerden */
+}
+
+#form-switch:checked ~ #login-form {
+    display: none;
+}
+
+/* === Animation Keyframes === */
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}

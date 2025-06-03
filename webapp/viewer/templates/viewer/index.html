@@ -1,55 +1,185 @@
-#index.html
 <!DOCTYPE html>
 {% load static %}
 
 <html>
 <head>
    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link href="https://fonts.googleapis.com/css?family=Lato:100,300,400,700,900" rel="stylesheet">
-    <link rel="stylesheet" type="text/css" href="{% static 'styles/style.css' %}">
-    <title>Login/Register</title> </head>
+   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+   <link href="https://fonts.googleapis.com/css?family=Lato:100,300,400,700,900" rel="stylesheet">
+   <link rel="stylesheet" type="text/css" href="{% static 'styles/style.css' %}">
+   <title>Login/Register</title>
+   <style>
+     body {
+       margin: 0;
+       overflow: hidden;
+       background: #fbf9ff;
+       font-family: 'Lato', sans-serif;
+     }
+
+     canvas#bg-canvas {
+       position: fixed;
+       top: 0;
+       left: 0;
+       width: 100vw;
+       height: 100vh;
+       z-index: -1;
+       pointer-events: none;
+     }
+   </style>
+</head>
 
 <body>
 
-   <div class="form_page">
+<canvas id="bg-canvas"></canvas>
 
-    <div class="form_inner">
+<header class="site_header">
+  <div class="header_content">
+    <img src="{% static 'images/logo textless white.png' %}" alt="Stream Clipper Logo" class="header_logo">
+    <span class="header_title">StreamClipper</span>
+  </div>
+</header>
 
-    <input type='checkbox' id='form-switch'>
+<div class="form_page">
+  <div class="form_inner">
+    <input type="checkbox" id="form-switch">
 
-    <form id='login-form' action="{% url 'index' %}" method='post'>
-      {% csrf_token %} <h2 class="form_tittle">Stream Clipper</h2>
+    <!-- Login-Formular -->
+    <form id="login-form" action="{% url 'index' %}" method="post">
+      {% csrf_token %}
+      <div class="form_header">
+        <img src="{% static 'images/logo.png' %}" alt="Stream Clipper Logo" class="form_logo">
+        <h2 class="form_tittle">Welcome back!</h2>
+      </div>
+
       <input type="text" placeholder="Username" name="username" required>
       <input type="password" placeholder="Password" name="password" required>
-      <button class="btn_form" type='submit' name="login_submit">Sign in</button>
-      <label for='form-switch'><span>Noch kein Account? Registrieren</span></label> {% if login_error %}
-           <p style="color: red; margin-top: 10px;">Login fehlgeschlagen. Benutzername oder Passwort ungültig.</p>
-       {% endif %}
-
-    </form>
-
-    <form id='register-form' action="{% url 'index' %}" method='post'>
-      {% csrf_token %} <h2 class="form_tittle">Stream Clipper</h2>
-      <input type="text" placeholder="Username" name="username" required>
-      <input type="password" placeholder="Password" name="password" required>
-      <input type="password" placeholder="Re Password" name="password2" required> <button class="btn_form" type='submit' name="register_submit">Register</button>
-      <label for='form-switch'><span>Schon Mitglied? Jetzt einloggen</span></label> {% if form.errors and request.POST.register_submit %} <div style="color: red; margin-top: 10px;">
-              <p>Fehler bei der Registrierung:</p>
-              {{ form.non_field_errors }}
-              {% for field in form %}
-                  {% if field.errors %}
-                      <p>{{ field.label }}: {{ field.errors|striptags }}</p>
-                  {% endif %}
-              {% endfor %}
-          </div>
+      <button class="btn_form" type="submit" name="login_submit">Sign in</button>
+      <label for="form-switch"><span>Noch kein Account? Registrieren</span></label>
+      {% if login_error %}
+        <p style="color: red; margin-top: 10px;">Login fehlgeschlagen. Benutzername oder Passwort ungültig.</p>
       {% endif %}
-
     </form>
 
-    </div>
-    </div>
+    <!-- Register-Formular -->
+    <form id="register-form" action="{% url 'index' %}" method="post">
+      {% csrf_token %}
+      <div class="form_header">
+        <img src="{% static 'images/logo.png' %}" alt="Stream Clipper Logo" class="form_logo">
+        <h2 class="form_tittle">Welcome!</h2>
+      </div>
 
-    </body>
+      <input type="text" placeholder="Username" name="username" required>
+      <input type="password" placeholder="Password" name="password" required>
+      <input type="password" placeholder="Re Password" name="password2" required>
+      <button class="btn_form" type="submit" name="register_submit">Register</button>
+      <label for="form-switch"><span>Schon Mitglied? Jetzt einloggen</span></label>
 
+      {% if form.errors and request.POST.register_submit %}
+        <div style="color: red; margin-top: 10px;">
+          <p>Fehler bei der Registrierung:</p>
+          {{ form.non_field_errors }}
+          {% for field in form %}
+            {% if field.errors %}
+              <p>{{ field.label }}: {{ field.errors|striptags }}</p>
+            {% endif %}
+          {% endfor %}
+        </div>
+      {% endif %}
+    </form>
+  </div>
+</div>
+
+<script>
+const canvas = document.getElementById("bg-canvas");
+const ctx = canvas.getContext("2d");
+
+function resizeCanvas() {
+  canvas.width = window.innerWidth;
+  canvas.height = window.innerHeight;
+}
+resizeCanvas();
+window.addEventListener("resize", resizeCanvas);
+
+const symbols = ["circle", "triangle", "square"];
+const particles = [];
+const particleCount = 300;
+const hoverRadius = 76; // ~2cm
+
+function randomSymbol() {
+  return symbols[Math.floor(Math.random() * symbols.length)];
+}
+
+function drawSymbol(p) {
+  const { x, y, size, symbol } = p;
+  ctx.beginPath();
+  switch(symbol) {
+    case "circle":
+      ctx.arc(x, y, size, 0, Math.PI * 2);
+      break;
+    case "triangle":
+      ctx.moveTo(x, y - size);
+      ctx.lineTo(x - size, y + size);
+      ctx.lineTo(x + size, y + size);
+      ctx.closePath();
+      break;
+    case "square":
+      ctx.rect(x - size, y - size, size * 2, size * 2);
+      break;
+  }
+  ctx.fillStyle = p.color;
+  ctx.fill();
+}
+
+for (let i = 0; i < particleCount; i++) {
+  particles.push({
+    x: Math.random() * canvas.width,
+    y: Math.random() * canvas.height,
+    vx: (Math.random() - 0.5) * 0.5,
+    vy: (Math.random() - 0.5) * 0.5,
+    size: 4 + Math.random() * 3,
+    symbol: randomSymbol(),
+    color: `hsl(${180 + Math.random() * 100}, 100%, 70%)`,
+  });
+}
+
+let mouse = { x: -9999, y: -9999 };
+
+// 👇 Das ist wichtig: document, nicht canvas!
+document.addEventListener("mousemove", e => {
+  mouse.x = e.clientX;
+  mouse.y = e.clientY;
+});
+
+document.addEventListener("mouseleave", () => {
+  mouse.x = -9999;
+  mouse.y = -9999;
+});
+
+function animate() {
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  for (let p of particles) {
+    p.x += p.vx;
+    p.y += p.vy;
+
+    if (p.x < 0 || p.x > canvas.width) p.vx *= -1;
+    if (p.y < 0 || p.y > canvas.height) p.vy *= -1;
+
+    let dx = p.x - mouse.x;
+    let dy = p.y - mouse.y;
+    let dist = Math.sqrt(dx * dx + dy * dy);
+    if (dist < hoverRadius) {
+      let angle = Math.atan2(dy, dx);
+      p.x += Math.cos(angle) * 2;
+      p.y += Math.sin(angle) * 2;
+    }
+
+    drawSymbol(p);
+  }
+  requestAnimationFrame(animate);
+}
+
+animate();
+</script>
+
+</body>
 </html>

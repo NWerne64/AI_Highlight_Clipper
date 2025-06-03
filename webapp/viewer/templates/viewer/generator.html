@@ -7,53 +7,37 @@
     <link href="https://fonts.googleapis.com/css?family=Lato:100,300,400,700,900" rel="stylesheet">
     <link rel="stylesheet" type="text/css" href="{% static 'styles/main.css' %}">
     <title>Generator - {{ stream.stream_name|default:"Video" }}</title>
-    <style>
-        .stats-box { background-color: rgba(0,0,0,0.2); padding: 15px 20px; border-radius: 8px; margin-bottom: 20px; text-align: center; border: 1px solid #444; }
-        .stats-box p { margin: 5px 0; font-size: 0.9em; }
-        .stats-box strong { color: #4dabf7; }
-        .stats-box .status-processing { color: orange; }
-        .stats-box .status-complete { color: lightgreen; }
-        .stats-box .status-error { color: red; }
-        .stats-box .status-pending { color: lightgray; }
-
-        .regenerate-section { text-align: center; margin-top: 15px; border-top: 1px solid #444; padding-top: 20px; }
-        .regenerate-section form label { margin-right: 10px; font-weight: bold; color: #f0f0f0;} /* Label für Formular */
-        .regenerate-section form input[type="number"] { padding: 6px 10px; border: 1px solid #ccc; border-radius: 4px; width: 90px; margin-right: 15px; background-color: #f8f9fa; color: #333; }
-        .regenerate-button { display: inline-block; padding: 8px 18px; background-color: #17a2b8; color: white; text-decoration: none; border-radius: 5px; font-weight: 500; border: none; cursor: pointer; transition: background-color 0.2s; font-size: 0.9em; vertical-align: middle; }
-        .regenerate-button:hover { background-color: #138496; }
-        /* .threshold-info { font-size: smaller; color: #aaa; margin-top: 10px; } */ /* Tipp entfernt */
-
-        .highlight-grid { display: flex; flex-wrap: wrap; gap: 20px; justify-content: center; margin-top: 30px; }
-        .highlight-item { background-color: rgba(0,0,0,0.3); padding: 10px; border-radius: 5px; width: 300px; text-align: center; }
-        .highlight-item video { max-width: 100%; height: auto; border-radius: 4px; margin-bottom: 5px; }
-        .highlight-item p { margin-top: 5px; font-size: 11px; color: #ccc; word-wrap: break-word; }
-        .no-highlights { text-align: center; margin-top: 20px; color: #aaa; }
-
-        /* Nachrichten-Styling */
-        .messages { list-style: none; padding: 0; margin: 15px auto; max-width: 800px; text-align: center; }
-        .messages li { padding: 10px 15px; margin-bottom: 10px; border-radius: 4px; font-size: 0.95em; }
-        .messages li.success { background-color: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
-        .messages li.error { background-color: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
-        .messages li.info { background-color: #d1ecf1; color: #0c5460; border: 1px solid #bee5eb; }
-        .messages li.warning { background-color: #fff3cd; color: #856404; border: 1px solid #ffeeba; }
-    </style>
 </head>
 <body>
 <div class="page">
 
-<header class="header">
-    <div class="container">
-        <div class="header_elements">
-             <a href='/' style="text-decoration: none;  color: #FFFFFF;"><div class="Logo">Stream Clipper</div></a>
-             <div class="user-menu">
-                <div class="user-info"> {{ name }}<img class="user" src="{% static 'images/user.png' %}" alt=""> </div>
-                <div class="logout-popup"> <form action="{% url 'logout' %}" method="post" style="margin: 0;"> {% csrf_token %} <button type="submit" class="logout-button">Logout</button> </form> </div>
-             </div>
+    <header class="site_header">
+        <div class="header_content">
+          <div class="branding">
+            <img src="{% static 'images/logo textless white.png' %}" alt="StreamClipper Logo" class="header_logo">
+            <span class="header_title">StreamClipper</span>
+          </div>
+          <div class="user-menu">
+            <div class="user-info">
+              {{ name }}
+              <img class="user" src="{% static 'images/user.png' %}" alt="">
+            </div>
+            <div class="logout-popup">
+              {% if is_staff %}
+                <a href="{% url 'admin:index' %}" class="control_panel">Control Panel</a>
+              {% endif %}
+              <form action="{% url 'logout' %}" method="post" style="margin: 0;">
+                {% csrf_token %}
+                <button type="submit" class="logout-button">Logout</button>
+              </form>
+            </div>
+
+          </div>
         </div>
-    </div>
-</header>
+      </header>
 
 <main class="main">
+
     <div class="container">
         <h2 style="text-align: center; margin-bottom: 20px;">Highlight Generator für: {{ stream.stream_name|default:"Video" }}</h2>
 
@@ -65,43 +49,14 @@
             </ul>
         {% endif %}
 
-        <div class="stats-box">
-            <p>Analyse-Status: <strong class="status-{{ stream.analysis_status|lower }}">{{ stream.get_analysis_status_display }}</strong></p>
-            {% if stream.analysis_status == 'ERROR' %} <p style="color: red;">Fehler bei der Analyse.</p> {% endif %}
-
-            {% if stream.analysis_status == 'COMPLETE' or stream.avg_loudness is not None %}
-                <p>Durchschnittliche Lautstärke (RMS): <strong>{{ stream.avg_loudness|floatformat:4|default:"-- N/A --" }}</strong></p>
-                <p>90. Perzentil Lautstärke (RMS): <strong>{{ stream.p90_loudness|floatformat:4|default:"-- N/A --" }}</strong></p>
-                <p>95. Perzentil Lautstärke (RMS): <strong>{{ stream.p95_loudness|floatformat:4|default:"-- N/A --" }}</strong></p>
-                <p>Maximale Lautstärke (RMS): <strong>{{ stream.max_loudness|floatformat:4|default:"-- N/A --" }}</strong></p>
-                {% if stream.sound_csv_path %} <p style="font-size: smaller; color: #aaa;">(Analyse-Daten: {{ stream.sound_csv_path }})</p> {% endif %}
-
-                <div class="regenerate-section">
-                    <form method="post" action="{% url 'regenerate_highlights' stream_id=stream.id %}">
-                        {% csrf_token %}
-                        <label for="id_new_threshold">Neuer Threshold (RMS):</label>
-                        <input type="number" id="id_new_threshold" name="new_threshold"
-                               value="{{ current_threshold|floatformat:4 }}"  {# Default Wert aus View #}
-                               step="0.005" min="0.001" max="10.0" required> {# Schrittweite, Min/Max anpassen #}
-
-                        <button type="submit" class="regenerate-button">
-                            Highlights neu generieren
-                        </button>
-                         </form>
-                </div>
-
-            {% elif stream.analysis_status == 'PROCESSING' %} <p>Analyse läuft aktuell... Seite später neu laden.</p>
-            {% elif stream.analysis_status == 'PENDING' %} <p>Analyse steht noch aus.</p>
-            {% endif %}
-        </div>
-
         <hr>
         <h3 style="text-align: center; margin-top: 30px;">Gefundene Highlights</h3>
         <div class="highlight-grid">
             {% for clip in clips_data %}
                 <div class="highlight-item">
                     {% if clip.media_url %}
-                        <video controls preload="none" width="280">
+                        <video controls preload="metadata" width="280"
+                               {% if clip.thumbnail_url %}poster="{{ clip.thumbnail_url }}"{% endif %}>
                             <source src="{{ clip.media_url }}" type="video/mp4">
                             Dein Browser unterstützt das Video-Tag nicht.
                         </video>
@@ -113,6 +68,7 @@
                     {% endif %}
                 </div>
             {% empty %}
+
                 <div class="no-highlights">
                     <p>Noch keine Highlights für dieses Video gefunden.</p>
                     {% if stream.analysis_status == 'COMPLETE' %}
@@ -128,6 +84,13 @@
         </div>
     </div>
 </main>
+
+
+  <footer class="footer">
+    <div class="container">
+      <div class="copyright">© StreamClipper</div>
+    </div>
+  </footer>
 
 </div>
 </body>
