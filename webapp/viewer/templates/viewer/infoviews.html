@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+{% load static %}
+{% load tags %}
+<html lang="de">
+
+<head>
+  <meta charset="UTF-8">
+  <title>StreamClipper – Info</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link href="https://fonts.googleapis.com/css?family=Lato:100,300,400,700,900" rel="stylesheet">
+  <link rel="stylesheet" type="text/css" href="{% static 'styles/main.css' %}">
+</head>
+
+<body>
+
+  <div class="page">
+
+      <header class="site_header">
+        <div class="header_content">
+          <a href="{% url 'index' %}" class="branding" style="text-decoration: none; display: flex; align-items: center; gap: 10px;">
+              <img src="{% static 'images/logo textless white.png' %}" alt="StreamClipper Logo" class="header_logo">
+              <span class="header_title" style="color: inherit;">StreamClipper</span>
+            </a>
+          <div class="user-menu">
+            <div class="user-info">
+              {{ name }}
+              <img class="user" src="{% static 'images/user.png' %}" alt="">
+            </div>
+            <div class="logout-popup">
+              {% if is_staff %}
+                <a href="{% url 'admin:index' %}" class="control_panel">Control Panel</a>
+              {% endif %}
+              <form action="{% url 'logout' %}" method="post" style="margin: 0;">
+                {% csrf_token %}
+                <button type="submit" class="logout-button">Logout</button>
+              </form>
+            </div>
+          </div>
+        </div>
+      <button id="themeToggle" title="Dark/Light Mode wechseln">🌙</button>
+      </header>
+
+    <main class="main">
+      <section class="stats-box">
+        <h2>🌟 Willkommen bei <strong>StreamClipper</strong> – deinem KI-gestützten Highlight-Tool!</h2>
+        <p><strong>StreamClipper</strong> ist die ultimative Plattform für Streamer, Content Creators und alle, die aus ihren Twitch-Streams oder Videos automatisch Highlight-Clips generieren möchten – intelligent, effizient und stilvoll.</p>
+        <hr>
+
+        <h3>🔧 Was kannst du mit StreamClipper machen?</h3>
+        <p>Auf der Startseite hast du drei leistungsstarke Optionen zur Auswahl:</p>
+
+        <ul>
+          <li><strong>📤 VOD hochladen:</strong> Lade ein bereits vorhandenes Video (z. B. im MP4-Format) hoch und lasse die KI Highlights automatisch erkennen und extrahieren. <br><em>Hinweis: Bei dieser Methode wird der Chat <u>nicht</u> mit analysiert.</em></li>
+          <li><strong>📡 Twitch Stream aufnehmen:</strong> Gib deinen Twitch-Kanalnamen ein und starte direkt eine Aufnahme. Die KI wertet danach auch den Chatverlauf aus.</li>
+          <li><strong>📺 Twitch VOD importieren:</strong> Suche nach einem Kanal und importiere eines der letzten 12 verfügbaren Streams – inklusive Chatanalyse und automatischer Clip-Erstellung.</li>
+        </ul>
+
+        <hr>
+
+        <h3>📽️ Übersicht über vorhandene Streams</h3>
+        <p>Im Bereich <em>„Vorhandene Streams“</em> findest du all deine bisherigen Uploads, Aufnahmen und Imports. Du kannst sie abspielen, verwalten oder löschen – übersichtlich und funktional.</p>
+
+        <hr>
+
+        <h3>✨ Warum StreamClipper?</h3>
+        <ul>
+          <li>✅ <strong>Benutzerfreundlich:</strong> Modernes Design und einfache Bedienung.</li>
+          <li>✅ <strong>KI-gestützt:</strong> Spart dir stundenlanges Durchforsten deiner VODs.</li>
+          <li>✅ <strong>Twitch-integriert:</strong> Direktes Arbeiten mit Streams und VODs.</li>
+          <li>✅ <strong>Schnell & schön:</strong> Effizienter Workflow mit stilvoller Oberfläche.</li>
+        </ul>
+
+        <p><strong>StreamClipper</strong> ist nicht einfach nur ein Tool – es ist dein persönlicher Video-Assistent auf dem Weg zum nächsten viralen Clip. Egal ob Hobby-Streamer oder Twitch-Profi – hier wird dein Content zum Highlight! 🚀</p>
+      </section>
+    </main>
+
+      <footer class="footer">
+        <div class="container">
+          <div class="copyright">© StreamClipper</div>
+        </div>
+      </footer>
+  </div>
+
+<a href="{% url 'infoviews' %}" title="Hilfe & Informationen"
+   style="
+     position: fixed;
+     bottom: 80px;
+     right: 20px;
+     background: #6f42c1;
+     color: white;
+     width: 40px;
+     height: 40px;
+     display: flex;
+     align-items: center;
+     justify-content: center;
+     border-radius: 50%;
+     border-color: white;
+     font-size: 22px;
+     text-decoration: none;
+     font-weight: bold;
+     box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+     z-index: 999;
+     transition: background-color 0.3s ease;">
+  ?
+</a>
+
+<script>
+     const toggle = document.getElementById('themeToggle');
+      const body = document.body;
+
+      // Beim Laden: Zustand aus localStorage übernehmen
+      if (localStorage.getItem('theme') === 'dark') {
+        body.classList.add('dark-mode');
+        toggle.textContent = '☀️';
+      }
+
+      toggle.addEventListener('click', () => {
+        body.classList.toggle('dark-mode');
+        const isDark = body.classList.contains('dark-mode');
+        toggle.textContent = isDark ? '☀️' : '🌙';
+        localStorage.setItem('theme', isDark ? 'dark' : 'light');
+      });
+  </script>
+
+</body>
+
+
+</html>
