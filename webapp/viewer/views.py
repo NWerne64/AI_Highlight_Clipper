@@ -1447,3 +1447,7 @@ def run_vod_download_and_analysis_thread(vod_url, target_video_path, stream_id,
     end_time_thread = time.time()
     duration_formatted = time.strftime('%H:%M:%S', time.gmtime(end_time_thread - start_time_thread))
     print(f"{log_prefix}--- Thread beendet (Dauer: {duration_formatted}) ---\n")
+
+
+def info_views(request):
+    return render(request, 'viewer/infoviews.html')

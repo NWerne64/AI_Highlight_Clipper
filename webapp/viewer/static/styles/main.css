@@ -57,6 +57,7 @@ body {
 
 .branding {
     display: flex;
+    color: white;
     align-items: center;
 }
 
@@ -804,6 +805,29 @@ a[href*="index"]:hover {
     margin-top: 8px;
 }
 
+#themeToggle {
+  position: absolute;
+  top: 50%;
+  right: 100px;
+  transform: translateY(-50%);
+  background: none;
+  border: 2px solid white;
+  border-radius: 20px;
+  padding: 6px 12px;
+  color: white;
+  font-weight: bold;
+  font-size: 16px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  z-index: 1000;
+}
+
+body.dark-mode #themeToggle {
+  border-color: #ccc;
+  color: #ccc;
+}
+
+
 .regenerate-button:hover {
     background-color: #5a32a3;
 }
@@ -866,6 +890,146 @@ a[href*="index"]:hover {
 
 .container a:hover {
     background-color: #5a32a3;
+}
+
+
+/* === Dark Mode Overrides === */
+body.dark-mode {
+  background: linear-gradient(135deg, #1e1e2f, #2c2c3a);
+  color: #e0e0e0;
+}
+
+.dark-mode .site_header,
+.dark-mode .footer {
+  background: #121223;
+  color: #fff;
+}
+
+.dark-mode .main h2 {
+    color: white;
+}
+
+.dark-mode .main h3 {
+    color: white;
+}
+
+
+.dark-mode .header_title,
+.dark-mode .user-info {
+  color: #fff;
+}
+
+.dark-mode .option_card {
+  background: #2a2a40;
+  color: #d0cfff;
+}
+
+
+.dark-mode .option_card:hover {
+  background: #38385c;
+}
+
+/* === Dark Mode: Formular-Hintergründe === */
+body.dark-mode #upload-form,
+body.dark-mode #record-form,
+body.dark-mode #twitch-import-form {
+  background: #3a3a4a;
+  border-color: #444;
+  color: #eee;
+}
+
+/* Input-Felder */
+body.dark-mode #upload-form input[type="text"],
+body.dark-mode #upload-form input[type="file"],
+body.dark-mode #record-form input[type="text"],
+body.dark-mode #twitch-import-form input[type="text"] {
+  background: #1e1e2f;
+  border: 1px solid #555;
+  color: #eee;
+}
+
+body.dark-mode #upload-form input[type="text"]:focus,
+body.dark-mode #upload-form input[type="file"]:focus,
+body.dark-mode #record-form input[type="text"]:focus,
+body.dark-mode #twitch-import-form input[type="text"]:focus {
+  border-color: #7b4ed4;
+  box-shadow: 0 0 0 3px rgba(123, 78, 212, 0.4);
+}
+
+/* File-Input Button */
+body.dark-mode #upload-form input[type="file"]::file-selector-button {
+  background-color: #7b4ed4;
+  color: white;
+}
+
+/* Labels */
+body.dark-mode #upload-form label,
+body.dark-mode #record-form label,
+body.dark-mode #twitch-import-form label {
+  color: #ccc;
+}
+
+
+.dark-mode .action_form,
+.dark-mode .vod-entry,
+.dark-mode .stream-entry,
+.dark-mode .stats-box,
+.dark-mode .video-container,
+.dark-mode .highlight-item {
+  background: #2c2c3a;
+  color: #ddd;
+  border-color: #444;
+}
+
+.dark-mode .vod-import-button,
+.dark-mode .generator-button,
+.dark-mode #upload-form button,
+.dark-mode #record-form button,
+.dark-mode #twitch-import-form button {
+  background-color: #7b4ed4;
+}
+
+.dark-mode .vod-import-button:hover,
+.dark-mode .generator-button:hover,
+.dark-mode #upload-form button:hover,
+.dark-mode #record-form button:hover,
+.dark-mode #twitch-import-form button:hover {
+  background-color: #5a32a3;
+}
+
+.dark-mode .text_video {
+  background: #1e1e2f;
+}
+
+
+/* Info-Button Standard-Styling (falls noch nicht im CSS, aus dem <style> kopieren) */
+.info-button {
+  position: fixed;
+  bottom: 80px;
+  right: 20px;
+  background: #6f42c1;
+  color: white;
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  font-size: 22px;
+  text-decoration: none;
+  font-weight: bold;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+  z-index: 999;
+  transition: background-color 0.3s ease;
+  border: 2px solid white;
+}
+
+/* Dark Mode: Info-Button */
+body.dark-mode .info-button {
+  background: #2c2c3a;
+  color: #eee;
+  border-color: #888;
+  box-shadow: 0 2px 10px rgba(255,255,255,0.1);
 }
 
 

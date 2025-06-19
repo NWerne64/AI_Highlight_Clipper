@@ -16,6 +16,7 @@ urlpatterns = [
     path('stream/<int:stream_id>/', views.stream, name='stream'), # Alte Highlight-Seite
     path('add_clip/', views.add_clip, name='add_clip'),
     path('delete/<int:stream_id>/', views.delete_stream, name='delete_stream'),
+    path('infoviews/', views.info_views, name='infoviews'),
 
     # --- NEUE URLS für Twitch VOD Import ---
     path('fetch_twitch_vods/', views.fetch_twitch_vods_view, name='fetch_twitch_vods'),
