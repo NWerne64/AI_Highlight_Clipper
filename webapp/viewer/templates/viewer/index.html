@@ -41,7 +41,7 @@
 
 <div class="form_page">
   <div class="form_inner">
-    <input type="checkbox" id="form-switch">
+    <input type="checkbox" id="form-switch" {% if registration_errors %}checked{% endif %}>
 
     <!-- Login-Formular -->
     <form id="login-form" action="{% url 'index' %}" method="post">
@@ -69,22 +69,22 @@
       </div>
 
       <input type="text" placeholder="Username" name="username" required>
-      <input type="password" placeholder="Password" name="password" required>
+      <input type="password" placeholder="Password" name="password1" required>
       <input type="password" placeholder="Re Password" name="password2" required>
-      <button class="btn_form" type="submit" name="register_submit">Register</button>
+      <button class="btn_form" type="submit" name="register_submit" value="1">Register</button>
       <label for="form-switch"><span>Schon Mitglied? Jetzt einloggen</span></label>
 
-      {% if form.errors and request.POST.register_submit %}
-        <div style="color: red; margin-top: 10px;">
-          <p>Fehler bei der Registrierung:</p>
-          {{ form.non_field_errors }}
-          {% for field in form %}
-            {% if field.errors %}
-              <p>{{ field.label }}: {{ field.errors|striptags }}</p>
-            {% endif %}
-          {% endfor %}
-        </div>
-      {% endif %}
+      {% if registration_errors %}
+          <div style="color: red; margin-top: 10px;">
+            <p>Fehler bei der Registrierung:</p>
+            {% for field, errors in registration_errors.items %}
+              {% for error in errors %}
+                <p>{{ field|capfirst }}: {{ error }}</p>
+              {% endfor %}
+            {% endfor %}
+          </div>
+        {% endif %}
+
     </form>
   </div>
 </div>

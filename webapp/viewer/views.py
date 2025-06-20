@@ -18,6 +18,7 @@ from transformers import pipeline as hf_pipeline  # Für das Sentiment-Modell
 
 import os
 import threading
+import logging
 import traceback
 import numpy as np
 import subprocess
@@ -80,9 +81,17 @@ def index(request):
                 print(f"Neuer User: {user.username}");
                 return redirect('index')
             else:
-                print(f"Reg.-Fehler: {reg_form_posted.errors.as_json()}");
-                return render(request, 'viewer/index.html',
-                              {'form': reg_form_posted})
+                logger = logging.getLogger(__name__)
+                logger.warning("Registrierungsfehler:")
+                for field, errors in reg_form_posted.errors.items():
+                    for error in errors:
+                        logger.warning(f"  {field}: {error}")
+
+                # Kontext mit Fehlermeldungen für das Template
+                return render(request, 'viewer/index.html', {
+                    'form': reg_form_posted,
+                    'registration_errors': reg_form_posted.errors
+                })
     if request.user.is_authenticated:
         stream_data = Stream.objects.filter(user_id=request.user.username).order_by('-id')
         # VIDEO-URL zum Stream-Objekt hinzufügen
