@@ -532,7 +532,7 @@ def generate_highlights_view(request, stream_id):
 def record_stream_view(request):
     if request.method == 'POST':
         twitch_username = request.POST.get('twitch_username', '').strip()
-        quality = request.POST.get('quality', '480p')  # Standardqualität
+        quality = request.POST.get('quality', '480p')
         if not twitch_username:
             messages.error(request, "Bitte Kanalnamen eingeben.")
             return redirect('index')
@@ -541,7 +541,7 @@ def record_stream_view(request):
         client_secret = getattr(settings, 'TWITCH_CLIENT_SECRET', None)
         recorder_script_path = getattr(settings, 'TWITCH_RECORDER_SCRIPT_PATH', None)
 
-        # Hole Pfade zu ffmpeg und streamlink aus Django Settings oder verwende Defaults
+        # Diese Variable wird hier bereits korrekt definiert
         ffmpeg_path = getattr(settings, 'FFMPEG_PATH', 'ffmpeg')
         streamlink_path = getattr(settings, 'STREAMLINK_PATH', 'streamlink')
 
@@ -553,16 +553,12 @@ def record_stream_view(request):
             messages.error(request, f"Fehler: Recorder-Skript nicht gefunden unter: {recorder_script_path}")
             return redirect('index')
 
-        # Optional: Flag-Verzeichnis (falls vom Recorder-Skript benötigt)
-        # flags_dir_path = os.path.join(settings.BASE_DIR, 'scripts', 'recorder_flags')
-        # os.makedirs(flags_dir_path, exist_ok=True)
-
         try:
             stream_obj = Stream.objects.create(
                 user_id=request.user.username,
-                stream_link=twitch_username.lower(),  # Kanalname als stream_link
+                stream_link=twitch_username.lower(),
                 stream_name=f"Aufnahme: {twitch_username}",
-                analysis_status='RECORDING_SCHEDULED'  # Status, dass Aufnahme geplant ist
+                analysis_status='RECORDING_SCHEDULED'
             )
             stream_id_for_script = stream_obj.id
             print(f"INFO: Stream-Objekt ID {stream_id_for_script} für Aufnahme von '{twitch_username}' erstellt.")
@@ -572,293 +568,164 @@ def record_stream_view(request):
             messages.error(request, "Datenbankfehler beim Planen der Aufnahme.")
             return redirect('index')
 
-        # Pfade für die Aufnahme erstellen
-        video_full_path_for_script = None
         try:
             user_id_part = str(request.user.username)
             stream_id_part = str(stream_id_for_script)
-            output_filename = f"{stream_id_part}.mp4"  # Standard Dateiname
-
-            # Relativer Pfad (bezogen auf MEDIA_ROOT) für Speicherung im Modell
+            output_filename = f"{stream_id_part}.mp4"
             relative_video_dir = os.path.join('uploads', user_id_part, stream_id_part)
             relative_file_path_for_db = os.path.join(relative_video_dir, output_filename).replace('\\', '/')
-
-            # Absoluter Pfad für das Recorder-Skript
             absolute_video_dir = os.path.join(settings.MEDIA_ROOT, relative_video_dir)
             os.makedirs(absolute_video_dir, exist_ok=True)
             video_full_path_for_script = os.path.join(absolute_video_dir, output_filename)
-
-            stream_obj.video_file.name = relative_file_path_for_db  # Speichere relativen Pfad
+            stream_obj.video_file.name = relative_file_path_for_db
             stream_obj.save(update_fields=['video_file'])
             print(f"INFO: Zielpfad für Aufnahme (absolut für Skript): {video_full_path_for_script}")
             print(f"INFO: video_file.name in DB gesetzt auf (relativ zu MEDIA_ROOT): {stream_obj.video_file.name}")
-
         except Exception as e_path:
             print(f"FEHLER beim Erstellen der Aufnahmepfade oder Speichern in DB: {e_path}");
             traceback.print_exc()
             messages.error(request, "Pfadfehler oder DB-Fehler beim Vorbereiten der Aufnahme.")
-            if stream_obj: stream_obj.delete()  # Lösche das fehlerhafte Stream-Objekt
+            if stream_obj: stream_obj.delete()
             return redirect('index')
 
         # Kommando zum Starten des Hintergrund-Recorders
         command = [
-            sys.executable, recorder_script_path,
-            '--username', twitch_username,
-            '--quality', quality,
-            '--uid', str(stream_id_for_script),
-            '--output-path', video_full_path_for_script,  # Absoluter Pfad hier
-            '--client-id', client_id,
-            '--client-secret', client_secret,
-            '--ffmpeg-path', ffmpeg_path,  # Übergebe Pfad an Skript
-            '--streamlink-path', streamlink_path  # Übergebe Pfad an Skript
-            # '--disable-ffmpeg' # Optional, falls du FFmpeg-Nachbearbeitung im Skript steuern willst
+            sys.executable,
+            recorder_script_path,
+            '--stream_id', str(stream_id_for_script),
+            '--twitch_channel', twitch_username,
+            '--output_dir', absolute_video_dir,
         ]
         print(f"INFO: Starte Hintergrund-Recorder-Prozess für Stream ID {stream_id_for_script}:")
         print(f"Kommando: {' '.join(command)}")
 
         try:
             process_creation_flags = 0
-            if os.name == 'nt':  # Für Windows: Prozess in neuer Gruppe starten, um Ctrl+C vom Webserver zu entkoppeln
+            if os.name == 'nt':
                 process_creation_flags = subprocess.CREATE_NEW_PROCESS_GROUP
-
-            # Starte den Prozess ohne auf sein Ende zu warten
+            print(f"DEBUG: FINALES Kommando-Array vor Ausführung: {command}")
             process = subprocess.Popen(command, creationflags=process_creation_flags)
-
             stream_obj.recorder_pid = process.pid
-            stream_obj.analysis_status = 'RECORDING'  # Status auf "Nimmt auf"
+            stream_obj.analysis_status = 'RECORDING'
             stream_obj.save(update_fields=['recorder_pid', 'analysis_status'])
-
             print(f"INFO: Recorder-Prozess gestartet (PID: {process.pid}). DB aktualisiert.")
             messages.success(request, f"Aufnahme für '{twitch_username}' (ID: {stream_id_for_script}) gestartet.")
         except Exception as e_popen:
             print(f"FEHLER beim Starten des Recorder-Prozesses: {e_popen}");
             traceback.print_exc()
             messages.error(request, "Fehler beim Starten des Aufnahme-Prozesses.")
-            stream_obj.analysis_status = 'ERROR'  # Fehlerstatus setzen
+            stream_obj.analysis_status = 'ERROR'
             stream_obj.recorder_pid = None
             stream_obj.save(update_fields=['analysis_status', 'recorder_pid'])
 
         return redirect('index')
-    else:  # GET Request
+    else:
         messages.warning(request, "Ungültige Anfrage für Aufnahme.")
         return redirect('index')
 
 
 # --- TWITCH AUFNAHME STOPPEN ---
 @login_required
-@require_POST
 def stop_recording_view(request, stream_id):
-    stream_obj = get_object_or_404(Stream, id=stream_id, user_id=request.user.username)
-    pid_to_kill = stream_obj.recorder_pid
-    log_prefix = f"[Stop Request View Stream {stream_id}, PID: {pid_to_kill}] "
-    print(log_prefix + "Attempting to stop recording.")
+    """
+    Stoppt eine laufende Aufnahme, indem eine Signal-Datei im korrekten
+    Stream-Verzeichnis erstellt wird.
+    """
+    stream = get_object_or_404(Stream, id=stream_id, user_id=request.user)
 
-    if not pid_to_kill:
-        print(log_prefix + "No PID found in database. Cannot stop.")
-        messages.warning(request, f"Keine laufende Aufnahme-PID für Stream {stream_id} gefunden.")
-        if stream_obj.analysis_status == 'RECORDING':  # Wenn Status noch auf Recording steht, aber PID fehlt
-            stream_obj.analysis_status = 'ERROR'  # Fehler, da PID weg ist
-            stream_obj.save(update_fields=['analysis_status'])
+    if stream.analysis_status != 'RECORDING':
+        messages.warning(request, f"Die Aufnahme von '{stream.twitch_channel or stream.stream_link}' läuft nicht und kann daher nicht gestoppt werden.")
         return redirect('index')
 
-    stop_successful = False
-    process_was_found = True
-    graceful_shutdown_wait_s = getattr(settings, 'RECORDER_GRACEFUL_SHUTDOWN_WAIT_S', 10)  # Aus Settings oder Default
+    # --- KORREKTUR: Pfad dynamisch ermitteln ---
+    if not stream.video_file or not stream.video_file.name:
+        messages.error(request, "Fehler: Der Pfad zur Videodatei ist nicht im Stream-Objekt gespeichert. Stoppen nicht möglich.")
+        return redirect('index')
 
-    # 1. Versuch: Graceful Shutdown (SIGINT / CTRL_C_EVENT)
-    print(
-        log_prefix + f"Attempting graceful shutdown (Signal: SIGINT/CTRL_C_EVENT, Wait: {graceful_shutdown_wait_s}s)...")
     try:
-        if os.name == 'nt':
-            # Auf Windows ist CTRL_C_EVENT für Prozesse in neuer Gruppe oft nicht direkt per os.kill sendbar.
-            # Besser ist, wenn das Skript selbst auf ein Flag reagiert oder eine andere IPC-Methode hat.
-            # Als Fallback versuchen wir es, aber taskkill ist oft zuverlässiger.
-            # Für Prozesse, die mit CREATE_NEW_PROCESS_GROUP gestartet wurden, ist es schwierig.
-            # Alternativ könnte das Skript eine kleine Datei (Flag) überwachen, die bei Stop erstellt wird.
-            # Hier wird taskkill /T bevorzugt. Wir versuchen es trotzdem mal.
-            os.kill(pid_to_kill, signal.CTRL_C_EVENT)
-        else:  # Unix-like
-            os.kill(pid_to_kill, signal.SIGINT)
+        # Leite den Pfad vom gespeicherten video_file ab
+        relative_video_path = stream.video_file.name
+        relative_stream_dir = os.path.dirname(relative_video_path)
+        absolute_stream_dir = os.path.join(settings.MEDIA_ROOT, relative_stream_dir)
 
-        print(log_prefix + "Signal sent. Waiting for process to terminate...")
-        time.sleep(graceful_shutdown_wait_s)
+        # Stelle sicher, dass das Verzeichnis existiert
+        if not os.path.isdir(absolute_stream_dir):
+            messages.error(request, f"Fehler: Das Aufnahmeverzeichnis '{absolute_stream_dir}' existiert nicht.")
+            return redirect('index')
 
-        # Prüfen, ob Prozess noch läuft
-        try:
-            os.kill(pid_to_kill, 0)  # Sendet kein Signal, prüft nur Existenz
-            print(log_prefix + f"Process {pid_to_kill} still exists after Signal. Proceeding to next stop method.")
-        except OSError:  # Prozess nicht mehr da
-            print(log_prefix + f"Process {pid_to_kill} successfully terminated after Signal.")
-            stop_successful = True
-            process_was_found = False
-    except ProcessLookupError:  # Prozess schon weg
-        print(log_prefix + f"Process {pid_to_kill} not found (ProcessLookupError). Already stopped or PID invalid.")
-        stop_successful = True
-        process_was_found = False
-        messages.info(request, f"Aufnahme für Stream {stream_id} war bereits beendet oder PID ungültig.")
-    except OSError as e_oskill:  # Fehler beim Senden des Signals (z.B. Permission Denied)
-        print(log_prefix + f"OS-Error sending Signal or checking process: {e_oskill}. Trying next method.")
-    except Exception as e_sig:  # Andere Fehler
-        print(log_prefix + f"Unexpected error sending Signal: {e_sig}\n{traceback.format_exc()}")
+        # Erstelle die leere Signal-Datei am korrekten Ort
+        stop_file_path = os.path.join(absolute_stream_dir, 'stop_recording.flag')
+        with open(stop_file_path, 'w') as f:
+            pass
+        print(f"INFO: Stopp-Signal-Datei erstellt unter: {stop_file_path}")
 
-    # 2. Versuch (Windows): taskkill (erst sanft, dann forciert)
-    if not stop_successful and process_was_found and os.name == 'nt':
-        print(log_prefix + "Attempting 'taskkill /PID ... /T' (graceful, includes child processes)...")
-        try:
-            # /T beendet auch Kindprozesse des PIDs (wichtig für streamlink, das ffmpeg starten kann)
-            result = subprocess.run(['taskkill', '/PID', str(pid_to_kill), '/T'],
-                                    capture_output=True, text=False, check=False, timeout=15)
-            # stdout/stderr Dekodierung mit Fallback, falls Encoding-Probleme
-            stderr_str = result.stderr.decode(sys.getfilesystemencoding(), errors='replace') if result.stderr else ""
-            stdout_str = result.stdout.decode(sys.getfilesystemencoding(), errors='replace') if result.stdout else ""
-
-            if result.returncode == 0:
-                print(log_prefix + "Taskkill /T erfolgreich gesendet. Warte kurz auf Terminierung...")
-                time.sleep(5)  # Kurze Wartezeit für Terminierung
-                try:
-                    os.kill(pid_to_kill, 0)  # Prüfe erneut
-                except OSError:
-                    stop_successful = True;
-                    process_was_found = False
-                    print(log_prefix + "Prozess erfolgreich mit taskkill /T beendet.")
-                    messages.success(request, f"Aufnahme für Stream {stream_id} gestoppt.")
-            elif "nicht gefunden" in stderr_str.lower() or "not found" in stderr_str.lower() or result.returncode == 128:
-                print(
-                    log_prefix + f"Prozess PID {pid_to_kill} nicht von taskkill /T gefunden. Vermutlich bereits beendet. Stderr: {stderr_str}")
-                stop_successful = True;
-                process_was_found = False
-                messages.info(request, f"Aufnahme für Stream {stream_id} war bereits beendet (taskkill /T).")
+        # Atomare Transaktion für das DB-Update
+        with transaction.atomic():
+            stream_to_update = Stream.objects.select_for_update().get(id=stream_id)
+            if stream_to_update.analysis_status == 'RECORDING':
+                stream_to_update.analysis_status = 'STOPPING'
+                stream_to_update.recorder_pid = None
+                stream_to_update.save(update_fields=['analysis_status', 'recorder_pid'])
+                messages.success(request, f"Stopp-Signal für '{stream.twitch_channel or stream.stream_link}' gesendet. Die Aufnahme wird beendet...")
             else:
-                print(
-                    log_prefix + f"Taskkill /T fehlgeschlagen. RC: {result.returncode}, Stderr: {stderr_str}, Stdout: {stdout_str}. Versuche Force Kill.")
-        except subprocess.TimeoutExpired:
-            print(log_prefix + "Taskkill /T Timeout. Versuche Force Kill.")
-        except FileNotFoundError:  # taskkill nicht gefunden
-            print(log_prefix + "FEHLER: taskkill Kommando nicht gefunden. Kann Prozess nicht sicher stoppen.");
-            messages.error(request, "Systemfehler: 'taskkill' nicht gefunden. Aufnahme konnte nicht gestoppt werden.")
-            # Status auf Fehler setzen, da wir nicht sicher sind, ob Aufnahme gestoppt wurde
-            stream_obj.analysis_status = 'ERROR_STOP_FAILED'
-        except Exception as e_taskkill_soft:
-            print(log_prefix + f"Unerwarteter Fehler bei taskkill /T: {e_taskkill_soft}\n{traceback.format_exc()}")
+                messages.warning(request, f"Die Aufnahme von '{stream.twitch_channel or stream.stream_link}' wurde bereits von einem anderen Prozess beendet.")
+                if os.path.exists(stop_file_path):
+                    os.remove(stop_file_path)
 
-    # 3. Versuch (Windows: taskkill /F oder Unix: SIGKILL) - Forciertes Beenden
-    if not stop_successful and process_was_found:
-        kill_cmd_str = ""
-        kill_action_msg = ""
-        try:
-            if os.name == 'nt':
-                kill_cmd_str = f"taskkill /F /PID {pid_to_kill} /T"
-                kill_action_msg = "Aufnahme GEWALTSAM gestoppt (taskkill /F)."
-                print(log_prefix + f"Attempting forceful '{kill_cmd_str}'...")
-                result = subprocess.run(['taskkill', '/F', '/PID', str(pid_to_kill), '/T'],
-                                        capture_output=True, text=False, check=False, timeout=10)
-                stderr_str_force = result.stderr.decode(sys.getfilesystemencoding(),
-                                                        errors='replace') if result.stderr else ""
-                if result.returncode == 0:
-                    stop_successful = True;
-                    process_was_found = False
-                elif "nicht gefunden" in stderr_str_force.lower() or "not found" in stderr_str_force.lower() or result.returncode == 128:
-                    print(log_prefix + f"Prozess nicht von forceful taskkill gefunden. Stderr: {stderr_str_force}")
-                    stop_successful = True;
-                    process_was_found = False
-                    kill_action_msg = "Aufnahme war bereits beendet (force kill)."  # Nachricht anpassen
-                else:
-                    print(
-                        log_prefix + f"Force taskkill FEHLGESCHLAGEN. RC: {result.returncode}, Stderr: {stderr_str_force}")
-                    kill_action_msg = "FEHLER beim gewaltsamen Stoppen der Aufnahme."
-                    stream_obj.analysis_status = 'ERROR_STOP_FAILED'
-            else:  # Unix-like
-                kill_cmd_str = f"kill -9 {pid_to_kill}"
-                kill_action_msg = "Aufnahme mit SIGKILL beendet."
-                print(log_prefix + "Attempting forceful SIGKILL (Unix)...")
-                os.kill(pid_to_kill, signal.SIGKILL)
-                # SIGKILL sollte sofort wirken, kurze Pause bevor Prüfung
-                time.sleep(1)
-                try:  # Prüfen ob noch da
-                    os.kill(pid_to_kill, 0)
-                    # Wenn wir hier sind, hat SIGKILL nicht sofort gewirkt oder es gab ein Problem
-                    print(log_prefix + "WARNUNG: Prozess existiert noch nach SIGKILL. Setze trotzdem auf erfolgreich.")
-                    stop_successful = True;
-                    process_was_found = False  # Annahme, dass es bald terminiert
-                except OSError:  # Prozess ist weg
-                    stop_successful = True;
-                    process_was_found = False
+    except Exception as e:
+        messages.error(request, f"Ein unerwarteter Fehler ist aufgetreten: {e}")
+        traceback.print_exc()
 
-            # Nachrichten basierend auf kill_action_msg
-            if stop_successful and "GEWALTSAM" in kill_action_msg:
-                messages.warning(request, kill_action_msg)
-            elif stop_successful and "SIGKILL" in kill_action_msg:
-                messages.warning(request, kill_action_msg)
-            elif stop_successful and "bereits beendet" in kill_action_msg:
-                messages.info(request, kill_action_msg)
-            elif not stop_successful and "FEHLER" in kill_action_msg:
-                messages.error(request, kill_action_msg)
-
-        except ProcessLookupError:  # Prozess schon weg vor diesem Schritt
-            print(log_prefix + f"Prozess nicht gefunden für {kill_cmd_str} (bereits beendet).")
-            stop_successful = True;
-            process_was_found = False
-            if not messages.get_messages(request): messages.info(request,
-                                                                 "Aufnahme war bereits beendet (vor force kill).")
-        except subprocess.TimeoutExpired:
-            print(log_prefix + f"Forceful {kill_cmd_str} timed out.")
-            # Annahme, dass der Prozess bald terminiert oder nicht mehr reagiert
-            stop_successful = True;
-            process_was_found = False
-            messages.warning(request, f"Timeout beim gewaltsamen Stoppen von {kill_cmd_str}. Status unklar.")
-        except FileNotFoundError:  # taskkill nicht gefunden
-            print(log_prefix + f"FEHLER: {kill_cmd_str.split()[0]} nicht gefunden.");
-            messages.error(request, f"Systemfehler: '{kill_cmd_str.split()[0]}' nicht gefunden.");
-            if stream_obj.analysis_status != 'ERROR_STOP_FAILED': stream_obj.analysis_status = 'ERROR_STOP_FAILED'
-        except Exception as e_kill_force:
-            print(
-                log_prefix + f"Unerwarteter Fehler beim forcierten Stoppen: {e_kill_force}\n{traceback.format_exc()}");
-            messages.error(request, "Unerwarteter Systemfehler beim Stoppen der Aufnahme.")
-            if stream_obj.analysis_status != 'ERROR_STOP_FAILED': stream_obj.analysis_status = 'ERROR_STOP_FAILED'
-
-    # Finale Statusaktualisierung für das Stream-Objekt
-    stream_obj.recorder_pid = None  # PID entfernen
-    final_status_for_stream = stream_obj.analysis_status  # Behalte Fehlerstatus, falls oben gesetzt
-
-    if stop_successful or not process_was_found:  # Wenn Prozess gestoppt wurde oder nicht mehr da war
-        video_file_valid = False
-        if stream_obj.video_file and stream_obj.video_file.name:
-            try:
-                video_full_path_check = os.path.join(settings.MEDIA_ROOT, stream_obj.video_file.name)
-                print(log_prefix + f"Überprüfe Videodatei: {video_full_path_check}")
-                if os.path.exists(video_full_path_check) and os.path.getsize(
-                        video_full_path_check) > 1024:  # Mindestgröße 1KB
-                    video_file_valid = True
-                    print(log_prefix + "Videodatei existiert und hat Inhalt.")
-                else:
-                    print(log_prefix + "Videodatei nicht gefunden oder leer.")
-                    # Nicht unbedingt ein Fehler, wenn Aufnahme kurz war oder manuell abgebrochen wurde
-                    # Aber wenn der Status noch 'RECORDING' war, ist es ein Problem.
-            except Exception as e_path_check:
-                print(log_prefix + f"Fehler beim Prüfen des Videodateipfads: {e_path_check}")
-
-        if video_file_valid:
-            # Wenn der Status noch auf RECORDING war, jetzt auf DOWNLOAD_COMPLETE setzen (oder äquivalent für lokale Aufnahmen)
-            if final_status_for_stream == 'RECORDING' or final_status_for_stream == 'RECORDING_SCHEDULED':
-                final_status_for_stream = 'DOWNLOAD_COMPLETE'  # Signalisiert, dass Video bereit zur Analyse ist
-            # if not messages.get_messages(request): messages.success(request, f"Aufnahme für Stream {stream_id} erfolgreich beendet. Video gespeichert.")
-            print(log_prefix + f"Aufnahme beendet. Videodatei '{stream_obj.video_file.name}' ist gültig.")
-        else:  # Keine gültige Videodatei
-            if final_status_for_stream not in ['ERROR', 'ERROR_NO_FILE', 'ERROR_STOP_FAILED']:
-                final_status_for_stream = 'ERROR_NO_FILE'  # Datei fehlt nach Stop
-            # if not messages.get_messages(request): messages.error(request, f"Aufnahme für Stream {stream_id} beendet, aber keine gültige Videodatei gefunden.")
-            print(log_prefix + "Aufnahme beendet, aber keine gültige Videodatei gefunden.")
-
-    elif final_status_for_stream not in ['ERROR', 'ERROR_STOP_FAILED', 'ERROR_NO_FILE']:  # Stop war nicht erfolgreich
-        final_status_for_stream = 'ERROR_STOP_FAILED'
-        print(log_prefix + "Stop-Kommando war nicht erfolgreich. Status auf ERROR_STOP_FAILED gesetzt.")
-        # if not messages.get_messages(request): messages.error(request, f"Konnte Aufnahme für Stream {stream_id} nicht sicher stoppen.")
-
-    stream_obj.analysis_status = final_status_for_stream
-    stream_obj.save(update_fields=['analysis_status', 'recorder_pid'])
-    print(log_prefix + f"Finaler DB Status: {stream_obj.analysis_status}. PID entfernt.")
     return redirect('index')
 
+@login_required
+@require_POST
+def process_recorded_video_view(request, stream_id):
+    """
+    Führt den FFmpeg Repack für eine aufgenommene Datei aus, um sie abspielbar zu machen.
+    """
+    stream = get_object_or_404(Stream, id=stream_id, user_id=request.user)
+    log_prefix = f"[Process Video View Stream {stream_id}] "
+
+    if not stream.video_file or not stream.video_file.name:
+        messages.error(request, "Keine Videodatei für diesen Stream gefunden.")
+        return redirect('index')
+
+    video_path = stream.video_file.path
+    if not os.path.exists(video_path):
+        messages.error(request, "Videodatei nicht im Dateisystem gefunden.")
+        stream.analysis_status = 'ERROR_NO_FILE'
+        stream.save()
+        return redirect('index')
+
+    ffmpeg_path = getattr(settings, 'FFMPEG_PATH', 'ffmpeg')
+    repacked_video_path_temp = video_path + ".repacked_temp.mp4"
+    repack_cmd = [
+        ffmpeg_path, '-i', video_path,
+        '-c', 'copy',
+        '-movflags', '+faststart',
+        repacked_video_path_temp, '-y'
+    ]
+
+    print(f"{log_prefix}Führe FFmpeg Repack aus...")
+    try:
+        subprocess.run(repack_cmd, check=True, capture_output=True, text=True, encoding='utf-8')
+        if os.path.exists(repacked_video_path_temp):
+            shutil.move(repacked_video_path_temp, video_path)
+            stream.analysis_status = 'DOWNLOAD_COMPLETE'
+            stream.save()
+            messages.success(request, "Video erfolgreich verarbeitet und ist jetzt abspielbar.")
+            print(f"{log_prefix}Repack erfolgreich.")
+        else:
+            raise FileNotFoundError("Temporäre Repack-Datei wurde nicht erstellt.")
+
+    except Exception as e:
+        messages.error(request, f"Fehler bei der Videoverarbeitung: {e}")
+        print(f"{log_prefix}FEHLER beim Repack: {e}")
+        stream.analysis_status = 'ERROR'
+        stream.save()
+
+    return redirect('index')
 
 # --- CLIP HINZUFÜGEN (vermutlich ungenutzt) ---
 def add_clip(request):

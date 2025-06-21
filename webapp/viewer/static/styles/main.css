@@ -1164,3 +1164,10 @@ input[type="file"],
 .card-button--danger:hover {
     background-color: #a02020;
 }
+
+.card-button--stop {
+    background-color: #ff8c00; /* Ein kräftiges Orange */
+}
+.card-button--stop:hover {
+    background-color: #e07b00; /* Etwas dunkler beim Hover */
+}

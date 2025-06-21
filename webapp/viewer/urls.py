@@ -10,6 +10,7 @@ urlpatterns = [
     path('add_stream/', views.add_stream, name='add_stream'), # Upload
     path('record_stream/', views.record_stream_view, name='record_stream'), # Twitch Record Start
     path('stop_recording/<int:stream_id>/', views.stop_recording_view, name='stop_recording'),
+    path('process_video/<int:stream_id>/', views.process_recorded_video_view, name='process_video'),
     path('video/<int:stream_id>/', views.video_player_view, name='video_player'),
     path('generator/<int:stream_id>/', views.generator_view, name='generator'),
     path('regenerate/<int:stream_id>/', views.regenerate_highlights_view, name='regenerate_highlights'),

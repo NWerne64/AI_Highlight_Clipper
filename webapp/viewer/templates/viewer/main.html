@@ -253,15 +253,30 @@
                     </div>
 
                     <div class="card-button-container">
-                        <a href="{% url 'video_player' stream_id=stream.id %}" class="card-button card-button--primary">
-                            Highlights & Details
-                        </a>
-                        <form action="{% url 'delete_stream' stream_id=stream.id %}" method="post" style="margin:0;" onsubmit="return confirm('Stream und alle zugehörigen Dateien wirklich löschen?');">
-                            {% csrf_token %}
-                            <button type="submit" class="card-button card-button--danger">
-                                Löschen 🗑️
-                            </button>
-                        </form>
+                        {% if stream.analysis_status == 'RECORDING' %}
+                            {# Button zum Stoppen der Aufnahme #}
+                            <form action="{% url 'stop_recording' stream_id=stream.id %}" method="post" style="margin:0;">
+                                {% csrf_token %}
+                                <button type="submit" class="card-button card-button--stop">Aufnahme Stoppen 🔴</button>
+                            </form>
+
+                        {% elif stream.analysis_status == 'PENDING' %}
+                            {# NEU: Button zum Verarbeiten des fertigen Videos #}
+                            <form action="{% url 'process_video' stream_id=stream.id %}" method="post" style="margin:0;">
+                                {% csrf_token %}
+                                <button type="submit" class="card-button card-button--warning">Video verarbeiten ⚙️</button>
+                            </form>
+                        
+                        {% else %}
+                            {# Standard-Buttons für fertige/fehlerhafte Streams #}
+                            <a href="{% url 'video_player' stream_id=stream.id %}" class="card-button card-button--primary">
+                                Highlights & Details
+                            </a>
+                            <form action="{% url 'delete_stream' stream_id=stream.id %}" method="post" style="margin:0;" onsubmit="return confirm('Stream und alle zugehörigen Dateien wirklich löschen?');">
+                                {% csrf_token %}
+                                <button type="submit" class="card-button card-button--danger">Löschen 🗑️</button>
+                            </form>
+                        {% endif %}
                     </div>
                 </div>
             {% endfor %}
