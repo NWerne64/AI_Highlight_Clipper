@@ -41,6 +41,7 @@ import subprocess
 import json
 from django.utils import timezone as django_timezone
 from datetime import datetime, timezone
+from django.utils.dateparse import parse_datetime
 
 # --- Globale Variable und Hilfsfunktion für das Sentiment-Analyse-Modell ---
 sentiment_classifier_pipeline = None

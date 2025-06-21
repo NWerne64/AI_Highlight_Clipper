@@ -3,7 +3,8 @@
 import requests
 import logging
 from django.conf import settings
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone  # KORREKTUR: 'timezone' hier aus datetime importieren
+from django.utils import timezone as django_timezone # KORREKTUR: Django's timezone für Fallbacks importieren
 import json
 
 logger = logging.getLogger(__name__)
@@ -126,6 +127,7 @@ def get_user_vods(twitch_user_id, max_results=10):
         formatted_vods = []
         for video in videos_data:
             thumbnail_url = video.get('thumbnail_url', '').replace('%{width}', '320').replace('%{height}', '180')
+
             duration_str = video.get('duration', '0s')
             total_seconds = 0
             if 'h' in duration_str:
@@ -140,11 +142,13 @@ def get_user_vods(twitch_user_id, max_results=10):
                 parts = duration_str.split('s')
                 total_seconds += int(parts[0])
 
+            # KORREKTUR: Sicherstellen, dass die Datumsverarbeitung robust ist
             try:
-                created_at_dt = datetime.strptime(video.get('created_at'), "%Y-%m-%dT%H:%M:%SZ").replace(tzinfo=timezone.utc)
-                created_at_formatted = created_at_dt.strftime("%d.%m.%Y, %H:%M Uhr")
+                created_at_dt = datetime.strptime(video.get('created_at'), "%Y-%m-%dT%H:%M:%SZ")
+                created_at_local = created_at_dt + timedelta(hours=2)  # Annahme: CEST
+                created_at_formatted = created_at_local.strftime("%d.%m.%Y, %H:%M Uhr")
             except (ValueError, TypeError):
-                created_at_dt = django_timezone.now()
+                created_at_formatted = video.get('created_at', '')
 
             formatted_vods.append({
                 'id': video.get('id'),
@@ -153,10 +157,9 @@ def get_user_vods(twitch_user_id, max_results=10):
                 'thumbnail_url': thumbnail_url,
                 'duration_seconds': total_seconds,
                 'duration_formatted': f"{total_seconds // 3600:02d}:{(total_seconds % 3600) // 60:02d}:{total_seconds % 60:02d}",
-                'created_at': created_at_dt,
+                'created_at': created_at_formatted,
                 'created_at_iso': video.get('created_at'),
                 'view_count': video.get('view_count')
-                # Die Zeile für 'game_name' wurde entfernt
             })
         logger.info(f"Successfully fetched {len(formatted_vods)} VODs for user ID {twitch_user_id}.")
         return formatted_vods
@@ -167,4 +170,5 @@ def get_user_vods(twitch_user_id, max_results=10):
         return []
     except Exception as e:
         logger.error(f"An unexpected error occurred while fetching or parsing VODs: {e}")
+        traceback.print_exc()  # Gibt den vollen Traceback aus, falls ein anderer Fehler auftritt
         return []

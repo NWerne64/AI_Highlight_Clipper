@@ -197,7 +197,7 @@
                             <h4 title="{{ vod.title }}">{{ vod.title }}</h4>
                             <p><strong>ID:</strong> {{ vod.id }}</p>
                             <p><strong>Dauer:</strong> {{ vod.duration_formatted }}</p>
-                            <p><strong>Datum:</strong> {{ vod.created_at|date:"d.m.Y, H:i" }} Uhr</p>
+                            <p><strong>Datum:</strong> {{ vod.created_at }} </p>
                             <p><strong>Views:</strong> {{ vod.view_count|default:"N/A" }}</p>
                         </div>
                         <div>
@@ -229,10 +229,10 @@
         <div class="vod-grid">
             {% for stream in stream_data %}
                 <div class="vod-entry">
-                    <div style="width: 100%; aspect-ratio: 16 / 9; background: #2d2d2d; overflow: hidden; position: relative;">
+                    <div class="card-video-container">
                         <a href="{% url 'video_player' stream_id=stream.id %}" style="display: block; width: 100%; height: 100%;">
                             {% if stream.video_file and stream.video_file.url %}
-                                <video preload="metadata" style="width: 100%; height: 100%; object-fit: cover;">
+                                <video preload="metadata" class="card-video">
                                     <source src="{{ stream.video_file.url }}#t=1" type="video/mp4">
                                 </video>
                             {% else %}
