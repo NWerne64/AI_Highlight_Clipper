@@ -37,6 +37,11 @@ from . import twitch_api_client
 # NEU: Import für die Chat-Analyse aus Datei
 from .chat_analysis import ChatAnalyzerFromFile
 
+import subprocess
+import json
+from django.utils import timezone as django_timezone
+from datetime import datetime, timezone
+
 # --- Globale Variable und Hilfsfunktion für das Sentiment-Analyse-Modell ---
 sentiment_classifier_pipeline = None
 
@@ -127,8 +132,8 @@ def add_stream(request):
         if form.is_valid():
             if not request.FILES.get('video_file'):
                 messages.error(request, "Bitte Videodatei auswählen.")
-                # Zeige das Formular erneut mit der Fehlermeldung
                 stream_data = Stream.objects.filter(user_id=request.user.username).order_by('-id')
+                # Stelle sicher, dass der Kontext für das erneute Rendern vollständig ist
                 return render(request, 'viewer/main.html', {
                     'upload_form': form,
                     'stream_data': stream_data,
@@ -139,53 +144,61 @@ def add_stream(request):
             new_stream = form.save(commit=False)
             new_stream.user_id = request.user.username
 
-            if not new_stream.stream_name:  # Wenn der Benutzer keinen Titel angibt
+            # KORREKTUR: Verwende das umbenannte django_timezone-Modul
+            new_stream.created_at = django_timezone.now()
+
+            if not new_stream.stream_name:
                 new_stream.stream_name = os.path.splitext(new_stream.video_file.name)[0]
 
-            new_stream.analysis_status = 'PENDING'  # Status für neu hochgeladene Videos
-            new_stream.save()  # Speichere das Objekt, um eine ID zu bekommen, bevor der Pfad finalisiert wird.
+            new_stream.analysis_status = 'PENDING'
+            new_stream.save()
 
-            # Zielverzeichnis und Dateiname basierend auf der Stream-ID erstellen
-            # Der get_upload_path in models.py wird dies beim Speichern der Datei selbst tun,
-            # aber wir brauchen den Pfad hier, um die Datei manuell zu verschieben/umzubenennen.
             user_id_str = str(new_stream.user_id)
             stream_id_str = str(new_stream.id)
-
-            # Temporärer Pfad, wo Django die Datei initial speichert (abhängig von File Storage Settings)
             temp_video_path = new_stream.video_file.path
-
-            # Finaler relativer Pfad in MEDIA_ROOT
             final_relative_dir = os.path.join('uploads', user_id_str, stream_id_str)
-            final_filename = f"{stream_id_str}.mp4"  # Standardisiere auf .mp4
+            final_filename = f"{stream_id_str}.mp4"
             final_relative_path = os.path.join(final_relative_dir, final_filename).replace('\\', '/')
-
-            # Absoluter Zielpfad
             absolute_target_dir = os.path.join(settings.MEDIA_ROOT, final_relative_dir)
             absolute_target_path = os.path.join(absolute_target_dir, final_filename)
-
             os.makedirs(absolute_target_dir, exist_ok=True)
 
             try:
                 shutil.move(temp_video_path, absolute_target_path)
-                new_stream.video_file.name = final_relative_path  # Aktualisiere den Dateipfad im Modell
-                new_stream.save(update_fields=['video_file'])  # Speichere die Änderung
+                new_stream.video_file.name = final_relative_path
+                new_stream.save(update_fields=['video_file', 'created_at'])
                 print(f"📦 Video erfolgreich nach '{absolute_target_path}' verschoben und Stream-Objekt aktualisiert.")
+
+                try:
+                    ffprobe_path = getattr(settings, 'FFPROBE_PATH', 'ffprobe')
+                    result = subprocess.run([
+                        ffprobe_path, '-v', 'error',
+                        '-show_entries', 'format=duration',
+                        '-of', 'default=noprint_wrappers=1:nokey=1',
+                        absolute_target_path
+                    ], stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, check=True)
+                    duration = float(result.stdout)
+                    new_stream.duration_seconds = int(duration)
+                    new_stream.save(update_fields=['duration_seconds'])
+                    print(f"🕒 Videodauer von {new_stream.duration_seconds}s erfolgreich ermittelt.")
+                except Exception as e:
+                    print(f"⚠️ Konnte Videodauer nicht auslesen: {e}")
+                    new_stream.duration_seconds = 0
+                    new_stream.save(update_fields=['duration_seconds'])
+
                 messages.success(request,
                                  f"Video '{new_stream.stream_name}' erfolgreich hochgeladen. Highlights können jetzt generiert werden.")
             except Exception as e:
                 print(
                     f"❌ Fehler beim Verschieben der Videodatei von '{temp_video_path}' nach '{absolute_target_path}': {e}")
-                new_stream.analysis_status = 'ERROR_NO_FILE'  # Oder ein anderer Fehlerstatus
+                new_stream.analysis_status = 'ERROR_NO_FILE'
                 new_stream.save(update_fields=['analysis_status'])
                 messages.error(request, "Fehler bei der Verarbeitung der hochgeladenen Videodatei.")
-                # new_stream.delete() # Optional: Stream-Objekt löschen, wenn Datei nicht verarbeitet werden kann
                 return redirect('index')
 
             return redirect('index')
         else:
-            # Formular ist nicht valide, zeige es erneut mit Fehlern
             stream_data = Stream.objects.filter(user_id=request.user.username).order_by('-id')
-            # Füge alle notwendigen Kontextvariablen hinzu, die main.html erwartet
             twitch_vods = request.session.get('twitch_vods_context', None)
             searched_channel_name = request.session.get('searched_channel_name_context', None)
             search_attempted = request.session.get('search_attempted_context', False)
@@ -198,7 +211,6 @@ def add_stream(request):
                 'twitch_vods': twitch_vods,
                 'searched_channel_name': searched_channel_name,
                 'search_attempted': search_attempted,
-                # Füge hier weitere Kontextvariablen hinzu, falls main.html sie benötigt
             })
     else:  # GET Request
         return redirect('index')
@@ -383,7 +395,7 @@ def generate_highlights_view(request, stream_id):
                 df_final_features['negative_message_count'].fillna(0) * 0.1
         )
 
-        top_clips_num = getattr(settings, 'TOP_N_HIGHLIGHTS', 3)
+        top_clips_num = getattr(settings, 'TOP_N_HIGHLIGHTS', 10)
         top_clips = df_final_features.sort_values(by='highlight_score', ascending=False).head(top_clips_num)
 
         # --- 5. Gründe berechnen und Clips extrahieren ---
@@ -1157,28 +1169,28 @@ def fetch_twitch_vods_view(request):
 
 
 @login_required
-@require_POST  # Import sollte POST sein
+@require_POST
 def import_selected_twitch_vod_view(request, vod_id):
     log_prefix_outer = f"[Import VOD View, VOD ID: {vod_id}] "
 
-    # Hole Daten aus dem POST-Request (vom Formular in main.html)
     vod_title = request.POST.get('vod_title', f"Twitch VOD {vod_id}")
-    vod_url = request.POST.get('vod_url')  # Die URL des VODs selbst
-    twitch_channel_name = request.POST.get('twitch_channel_name', '').strip().lower()  # Der Kanalname
+    vod_url = request.POST.get('vod_url')
+    twitch_channel_name = request.POST.get('twitch_channel_name', '').strip().lower()
+    vod_duration_seconds = request.POST.get('vod_duration_seconds')
+    vod_created_at_iso = request.POST.get('vod_created_at_iso')
 
     if not vod_url:
-        messages.error(request, "VOD URL nicht übermittelt. Import fehlgeschlagen.");
-        print(log_prefix_outer + "FEHLER: VOD URL fehlt im POST Request.");
+        messages.error(request, "VOD URL nicht übermittelt. Import fehlgeschlagen.")
+        print(log_prefix_outer + "FEHLER: VOD URL fehlt im POST Request.")
         return redirect('index')
-    if not twitch_channel_name:  # Wichtig für Stream.stream_link
-        messages.error(request, "Twitch Kanalname fehlt. Import fehlgeschlagen.");
-        print(log_prefix_outer + "FEHLER: Twitch Kanalname fehlt im POST Request.");
+    if not twitch_channel_name:
+        messages.error(request, "Twitch Kanalname fehlt. Import fehlgeschlagen.")
+        print(log_prefix_outer + "FEHLER: Twitch Kanalname fehlt im POST Request.")
         return redirect('index')
 
     print(
         f"{log_prefix_outer}User '{request.user.username}' importiert '{vod_title}' (URL: {vod_url}, Kanal: {twitch_channel_name})")
 
-    # Prüfe, ob dieses VOD bereits importiert wird oder wurde (basierend auf twitch_vod_id)
     existing_stream = Stream.objects.filter(twitch_vod_id=vod_id, user_id=request.user.username).first()
     if existing_stream:
         messages.warning(request, f"VOD '{vod_title}' (ID: {vod_id}) wurde bereits importiert oder der Import läuft.")
@@ -1186,63 +1198,72 @@ def import_selected_twitch_vod_view(request, vod_id):
             f"{log_prefix_outer}WARNUNG: VOD ID {vod_id} existiert bereits für User {request.user.username} (Stream ID: {existing_stream.id})")
         return redirect('index')
 
+    if vod_created_at_iso:
+        try:
+            # KORREKTUR: timezone.utc aus dem 'datetime'-Modul verwenden
+            created_at_dt = datetime.strptime(vod_created_at_iso, "%Y-%m-%dT%H:%M:%SZ").replace(tzinfo=timezone.utc)
+        except (ValueError, TypeError):
+            print(f"{log_prefix_outer}WARNUNG: Ungültiges Datumsformat empfangen: {vod_created_at_iso}. Verwende aktuelles Datum.")
+            created_at_dt = django_timezone.now() # Django's timezone für den Fallback
+    else:
+        print(f"{log_prefix_outer}WARNUNG: Kein Datum empfangen. Verwende aktuelles Datum.")
+        created_at_dt = django_timezone.now() # Django's timezone für den Fallback
+
     try:
         stream_obj = Stream.objects.create(
             user_id=request.user.username,
-            stream_link=twitch_channel_name,  # Wichtig für die Zuordnung von Highlights etc.
-            stream_name=vod_title[:198],  # Kürze Titel falls zu lang für DB-Feld
-            analysis_status='DOWNLOAD_SCHEDULED',  # Status, dass Download geplant ist
-            twitch_vod_id=vod_id  # Speichere die Twitch VOD ID
+            stream_link=twitch_channel_name,
+            stream_name=vod_title[:198],
+            analysis_status='DOWNLOAD_SCHEDULED',
+            twitch_vod_id=vod_id,
+            duration_seconds=int(vod_duration_seconds) if vod_duration_seconds and vod_duration_seconds.isdigit() else 0,
+            created_at=created_at_dt
         )
-        stream_id_for_thread = stream_obj.id  # ID des neu erstellten Stream-Objekts
+        stream_id_for_thread = stream_obj.id
         print(f"{log_prefix_outer}Stream-Objekt ID {stream_id_for_thread} für VOD-Import erstellt.")
     except Exception as e_db_create:
-        print(f"{log_prefix_outer}FEHLER beim Erstellen des Stream-Objekts für VOD-Import: {e_db_create}");
+        print(f"{log_prefix_outer}FEHLER beim Erstellen des Stream-Objekts für VOD-Import: {e_db_create}")
         traceback.print_exc()
-        messages.error(request, "Datenbankfehler beim Erstellen des Stream-Eintrags für den VOD-Import.");
+        messages.error(request, "Datenbankfehler beim Erstellen des Stream-Eintrags für den VOD-Import.")
         return redirect('index')
 
-    # Pfade für den Download erstellen
+    # Der Rest der Funktion (Pfade erstellen, Thread starten) bleibt unverändert
     video_full_path_for_download = None
     try:
         user_id_part = str(request.user.username)
         stream_id_part = str(stream_id_for_thread)
-        output_filename = f"{stream_id_part}.mp4"  # Standard-Dateiname für das Video
-
+        output_filename = f"{stream_id_part}.mp4"
         relative_dir = os.path.join('uploads', user_id_part, stream_id_part)
         absolute_target_dir = os.path.join(settings.MEDIA_ROOT, relative_dir)
-        os.makedirs(absolute_target_dir, exist_ok=True)  # Erstelle Verzeichnis falls nicht vorhanden
-
+        os.makedirs(absolute_target_dir, exist_ok=True)
         video_full_path_for_download = os.path.join(absolute_target_dir, output_filename)
         relative_file_path_for_db = os.path.join(relative_dir, output_filename).replace('\\', '/')
-
-        stream_obj.video_file.name = relative_file_path_for_db  # Setze den Pfad im Modellfeld
-        stream_obj.save(update_fields=['video_file'])  # Speichere die Pfadänderung
-
+        stream_obj.video_file.name = relative_file_path_for_db
+        stream_obj.save(update_fields=['video_file'])
         print(f"{log_prefix_outer}Zielpfad für VOD-Download: {video_full_path_for_download}")
         print(f"{log_prefix_outer}DB video_file.name gesetzt auf: {stream_obj.video_file.name}")
     except Exception as e_path:
-        print(f"{log_prefix_outer}FEHLER beim Erstellen der Downloadpfade: {e_path}");
+        print(f"{log_prefix_outer}FEHLER beim Erstellen der Downloadpfade: {e_path}")
         traceback.print_exc()
-        messages.error(request, "Pfadfehler beim Vorbereiten des VOD-Imports.");
-        if stream_obj: stream_obj.delete()  # Lösche das fehlerhafte Stream-Objekt
+        messages.error(request, "Pfadfehler beim Vorbereiten des VOD-Imports.")
+        if stream_obj: stream_obj.delete()
         return redirect('index')
 
-    # Starte den Download-Thread
     try:
         print(f"{log_prefix_outer}Starte Download-Thread für Stream ID: {stream_id_for_thread}, VOD URL: {vod_url}")
+        # Annahme: 'run_vod_download_and_analysis_thread' ist deine Thread-Funktion
         download_thread = threading.Thread(
-            target=run_vod_download_and_analysis_thread,  # Die angepasste Funktion
+            target=run_vod_download_and_analysis_thread,
             args=(vod_url, video_full_path_for_download, stream_id_for_thread, request.user.username),
-            daemon=True  # Thread stirbt, wenn Hauptprozess beendet wird
+            daemon=True
         )
         download_thread.start()
-        print(f"{log_prefix_outer}Download-Thread erfolgreich gestartet.");
+        print(f"{log_prefix_outer}Download-Thread erfolgreich gestartet.")
         messages.success(request, f"Import und Download für '{vod_title}' gestartet. Dies kann einige Zeit dauern.")
     except Exception as e_thread:
-        print(f"{log_prefix_outer}FEHLER beim Starten des Download-Threads: {e_thread}");
+        print(f"{log_prefix_outer}FEHLER beim Starten des Download-Threads: {e_thread}")
         traceback.print_exc()
-        stream_obj.analysis_status = 'ERROR'  # Fehlerstatus setzen
+        stream_obj.analysis_status = 'ERROR'
         stream_obj.save(update_fields=['analysis_status'])
         messages.error(request, "Fehler beim Starten des VOD-Importprozesses.")
 

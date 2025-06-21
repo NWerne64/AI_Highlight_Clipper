@@ -1,6 +1,7 @@
 # AI_Highlight_Clipper/webapp/viewer/models.py
 
 from django.db import models
+from django.utils import timezone  # Import für das Standard-Datum hinzufügen
 import os
 
 def get_upload_path(instance, filename):
@@ -39,10 +40,12 @@ class Stream(models.Model):
     max_loudness = models.FloatField(null=True, blank=True)
     recorder_pid = models.IntegerField(null=True, blank=True)
     twitch_vod_id = models.CharField(max_length=50, blank=True, null=True, unique=True)
-
-    # NEUES FELD für den Pfad zur heruntergeladenen Chat-Datei
-    # Speichert den relativen Pfad von MEDIA_ROOT, z.B. 'uploads/username/stream_id/stream_id_chat.json'
     chat_log_file = models.CharField(max_length=500, blank=True, null=True)
+
+    # ### START DER NEUEN FELDER ###
+    duration_seconds = models.IntegerField(null=True, blank=True, help_text="Dauer des Videos in Sekunden")
+    created_at = models.DateTimeField(default=timezone.now, help_text="Erstellungs- oder Importdatum des Streams")
+    # ### ENDE DER NEUEN FELDER ###
 
     def get_analysis_status_display(self):
         return dict(Stream.ANALYSIS_STATUS_CHOICES).get(self.analysis_status, self.analysis_status)

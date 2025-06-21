@@ -8,6 +8,6 @@ class StreamUploadForm(forms.ModelForm):
         fields = ['stream_link', 'video_file']
         # Optional: Labels ändern
         labels = {
-            'stream_link': 'Titel oder Kanalname',
+            'stream_link': 'Kanalname',
             'video_file': 'Videodatei auswählen',
         }

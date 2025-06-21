@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 {% load static %}
 {% load tags %}
-<html lang="en">
+{% load tz %}  <html lang="en">
 
 <head>
   <meta charset="UTF-8">
@@ -148,7 +148,6 @@
   <main class="main">
     <div class="container">
 
-      <!-- Auswahloptionen -->
       <div class="form_selector">
         <h2>Was möchtest du tun?</h2>
         <div class="option_grid">
@@ -161,14 +160,12 @@
 
       {% if messages %}<ul class="messages">{% for message in messages %}<li{% if message.tags %} class="{{ message.tags }}"{% endif %}>{{ message }}</li>{% endfor %}</ul>{% endif %}
 
-      <!-- Upload-Formular -->
       <form id="upload-form" class="action_form hidden" method="post" enctype="multipart/form-data" action="{% url 'add_stream' %}">
         <h2>Video hochladen</h2>
         {% csrf_token %} {{ upload_form.as_p }}
         <button type="submit">Hochladen & Analysieren</button>
       </form>
 
-      <!-- Aufnahme -->
       <form id="record-form" class="action_form hidden" method="post" action="{% url 'record_stream' %}">
         <h2>Twitch Stream aufnehmen</h2>
         {% csrf_token %}
@@ -179,7 +176,6 @@
         <button type="submit">Aufnahme starten</button>
       </form>
 
-      <!-- Import -->
       <form id="twitch-import-form" class="action_form hidden" method="post" action="{% url 'fetch_twitch_vods' %}">
         <h2>Twitch VODs importieren</h2>
         {% csrf_token %}
@@ -190,11 +186,10 @@
         <button type="submit">VODs suchen</button>
       </form>
 
-      <!-- Gefundene VODs -->
       <div id="twitch-vod-list-container" style="margin-top: 30px;">
         {% if twitch_vods %}
             <h3 style="margin-bottom: 20px;">Gefundene {{ searched_channel_name }} VODs :</h3>
-            <div class="vod-grid"> {# Grid mit 4 Spalten #}
+            <div class="vod-grid">
                 {% for vod in twitch_vods %}
                     <div class="vod-entry">
                         <img src="{{ vod.thumbnail_url }}" alt="VOD Thumbnail">
@@ -202,7 +197,7 @@
                             <h4 title="{{ vod.title }}">{{ vod.title }}</h4>
                             <p><strong>ID:</strong> {{ vod.id }}</p>
                             <p><strong>Dauer:</strong> {{ vod.duration_formatted }}</p>
-                            <p><strong>Datum:</strong> {{ vod.created_at }}</p>
+                            <p><strong>Datum:</strong> {{ vod.created_at|date:"d.m.Y, H:i" }} Uhr</p>
                             <p><strong>Views:</strong> {{ vod.view_count|default:"N/A" }}</p>
                         </div>
                         <div>
@@ -210,6 +205,8 @@
                                 {% csrf_token %}
                                 <input type="hidden" name="vod_title" value="{{ vod.title }}">
                                 <input type="hidden" name="vod_url" value="{{ vod.url }}">
+                                <input type="hidden" name="vod_duration_seconds" value="{{ vod.duration_seconds }}">
+                                <input type="hidden" name="vod_created_at_iso" value="{{ vod.created_at_iso }}">
                                 <input type="hidden" name="twitch_channel_name" value="{{ searched_channel_name|default:'' }}">
                                 <button type="submit" class="vod-import-button">Dieses VOD importieren</button>
                             </form>
@@ -228,50 +225,50 @@
       <hr style="margin-top: 40px;">
       <h2>Vorhandene Streams</h2>
 
-      <div class="video_lines">
-        {% for stream in stream_data %}
-          {# Entfernen oder auskommentieren, z.B.: #}
-        {# {% if forloop.counter0|modulo:3 == 0 %}<div class="line">{% endif %} #}
+      {% if stream_data %}
+        <div class="vod-grid">
+            {% for stream in stream_data %}
+                <div class="vod-entry">
+                    <div style="width: 100%; aspect-ratio: 16 / 9; background: #2d2d2d; overflow: hidden; position: relative;">
+                        <a href="{% url 'video_player' stream_id=stream.id %}" style="display: block; width: 100%; height: 100%;">
+                            {% if stream.video_file and stream.video_file.url %}
+                                <video preload="metadata" style="width: 100%; height: 100%; object-fit: cover;">
+                                    <source src="{{ stream.video_file.url }}#t=1" type="video/mp4">
+                                </video>
+                            {% else %}
+                                <div style="width: 100%; height: 100%; display: flex; align-items: center; justify-content: center;">
+                                    <span style="color: #888; font-size: 60px; font-weight: bold;">?</span>
+                                </div>
+                            {% endif %}
+                        </a>
+                         <img src="{% static 'images/play.png' %}" alt="Play" style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 50px; height: 50px; opacity: 0.7; pointer-events: none;">
+                    </div>
 
-          <div class="stream-entry">
+                    <div class="info-block">
+                        <h4 title="{{ stream.stream_name|default:stream.stream_link }}">{{ stream.stream_name|default:stream.stream_link }}</h4>
+                        <p><strong>Kanal:</strong> {{ stream.stream_link }}</p>
+                        <p><strong>Dauer:</strong> {{ stream.duration_seconds|format_duration }}</p>
+                        <p><strong>Datum:</strong> {{ stream.created_at|date:"d.m.Y, H:i" }} Uhr</p>
+                        <p><strong>Status:</strong> {{ stream.get_analysis_status_display }}</p>
+                    </div>
 
-            <div class="video video-hover-container">
-              {% if stream.video_url %}
-                  <div style="position: relative; width: 100%; aspect-ratio: 9 / 6 ; overflow: hidden;">
-                    <video
-                      playsinline
-                      preload="metadata"
-                      style="width: 100%; height: 100%; object-fit: cover; display: block; pointer-events: none;"
-                    >
-                      <source src="{{ stream.video_url }}#t=0,0010" type="video/mp4">
-                    </video>
-                  </div>
-              {% elif stream.thumbnail_url %}
-                <img src="{{ stream.thumbnail_url }}" alt="Stream Thumbnail" style="width: 100%; height: 100%; object-fit: cover; display: block;">
-              {% else %}
-                <div style="width: 100%; height: 100%; background: #ccc; display: flex; align-items: center; justify-content: center;">
-                  <span style="color: #666; font-size: 14px;">Kein Vorschau verfügbar</span>
+                    <div class="card-button-container">
+                        <a href="{% url 'video_player' stream_id=stream.id %}" class="card-button card-button--primary">
+                            Highlights & Details
+                        </a>
+                        <form action="{% url 'delete_stream' stream_id=stream.id %}" method="post" style="margin:0;" onsubmit="return confirm('Stream und alle zugehörigen Dateien wirklich löschen?');">
+                            {% csrf_token %}
+                            <button type="submit" class="card-button card-button--danger">
+                                Löschen 🗑️
+                            </button>
+                        </form>
+                    </div>
                 </div>
-              {% endif %}
-
-              <a href="{% url 'video_player' stream_id=stream.id %}" class="video-overlay-button play-button" title="Video ansehen">
-                <img src="{% static 'images/play.png' %}" alt="Play">
-              </a>
-              <form action="{% url 'delete_stream' stream_id=stream.id %}" method="post" class="video-overlay-button delete-form" onsubmit="return confirm('Wirklich löschen?');">
-                {% csrf_token %}
-                <button type="submit" class="delete-button-overlay"><img src="{% static 'images/delete.png' %}" alt="Löschen"></button>
-              </form>
-              <span class="text_video">{{ stream.stream_name|default:stream.stream_link }}</span>
-            </div>
-
-
-          </div>
-        {% if forloop.counter|modulo:3 == 0 or forloop.last %}</div>{% endif %}
-        {% empty %}
-          <p>Noch keine Streams vorhanden.</p>
-        {% endfor %}
-      </div>
-
+            {% endfor %}
+        </div>
+      {% else %}
+          <p style="text-align: center; margin-top: 20px;">Noch keine Streams vorhanden.</p>
+      {% endif %}
 
   </main>
 
@@ -281,7 +278,6 @@
     </div>
   </footer>
 
-  <!-- Umschalt- und Logo-Logik -->
   <script>
       document.querySelectorAll('.option_card').forEach(card => {
         card.addEventListener('click', () => {
@@ -290,10 +286,8 @@
 
           const isAlreadyVisible = !targetForm.classList.contains('hidden');
 
-          // Alle Formulare ausblenden
           document.querySelectorAll('.action_form').forEach(form => form.classList.add('hidden'));
 
-          // Wenn es vorher nicht sichtbar war → jetzt anzeigen
           if (!isAlreadyVisible) {
             targetForm.classList.remove('hidden');
             targetForm.scrollIntoView({ behavior: 'smooth' });
@@ -304,7 +298,6 @@
       const toggle = document.getElementById('themeToggle');
       const body = document.body;
 
-      // Beim Laden: Zustand aus localStorage übernehmen
       if (localStorage.getItem('theme') === 'dark') {
         body.classList.add('dark-mode');
         toggle.textContent = '☀️';
@@ -321,8 +314,6 @@
 </div>
 
 <a href="{% url 'infoviews' %}" title="Hilfe & Informationen" class="info-button">?</a>
-
-
 
 </body>
 

@@ -375,21 +375,52 @@ main.main {
     max-width: 1200px; /* optional: max. Breite für große Bildschirme */
 }
 
-.option_card {
-  background: white;
-  border: none;
-  padding: 20px 30px;
-  border-radius: 12px;
-  color: #6f42c1;
-  font-weight: 700;
-  font-size: 16px;
-  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.08);
-  transition: all 0.3s ease;
+.form_selector {
+  text-align: center;
+  margin-bottom: 40px;
 }
 
+.form_selector h2 {
+  margin-bottom: 20px;
+}
+
+.option_grid {
+  display: flex;              /* Aktiviert Flexbox */
+  justify-content: center;    /* Zentriert die Gruppe von Buttons */
+  gap: 20px;                  /* Definiert den Abstand zwischen den Buttons */
+  width: 45%;                 /* Lässt den Container einen Großteil der Seitenbreite einnehmen * hier für die größe der Kästen was verändern.*/
+  max-width: 1200px;          /* Verhindert, dass die Buttons auf sehr großen Bildschirmen zu breit werden */
+  margin: 0 auto;             /* Zentriert den Container selbst auf der Seite */
+  /* Die Zeile "flex-wrap: wrap;" wurde entfernt, um einen Umbruch zu verhindern */
+}
+
+/* === Button-Karten === */
+.option_card {
+  /* Flex-Eigenschaft für gleiche Breite in EINER Zeile */
+  flex: 1;                    /* JEDER Button nimmt den GLEICHEN Anteil des verfügbaren Platzes ein.
+                                 Das ist die einfachste Methode, um sie gleich breit zu machen. */
+
+  /* Bestehende Stile beibehalten */
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background: #f3f0ff;
+  border: 2px solid #6f42c1;
+  padding: 20px;
+  border-radius: 10px;
+  font-size: 16px;
+  font-weight: bold;
+  color: #6f42c1;
+  cursor: pointer;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+  transition: all 0.2s ease-in-out;
+  text-align: center;
+}
+
+/* Der Hover-Effekt bleibt unverändert */
 .option_card:hover {
-  transform: translateY(-4px);
-  box-shadow: 0 12px 24px rgba(0, 0, 0, 0.12);
+  background: #e5dbff;
+  transform: translateY(-2px);
 }
 
 
@@ -1060,4 +1091,43 @@ input[type="file"],
         transform: translateY(0);
     }
 }
+/* Container für die Buttons, sorgt für korrekten Abstand */
+.card-button-container {
+    padding: 0 15px 15px 15px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px; /* Definiert den Abstand zwischen den beiden Buttons */
+}
 
+/* Basis-Stil für alle Karten-Buttons */
+.card-button {
+    display: block;
+    width: 100%;
+    padding: 10px;
+    border-radius: 6px;
+    text-decoration: none;
+    color: white;
+    font-weight: 600;
+    text-align: center;
+    border: none;
+    cursor: pointer;
+    font-size: 14px;
+    box-sizing: border-box; /* Stellt sicher, dass Padding die Breite nicht beeinflusst */
+    transition: background-color 0.2s;
+}
+
+/* Farbe für den primären Button (Highlights) */
+.card-button--primary {
+    background-color: #6f42c1;
+}
+.card-button--primary:hover {
+    background-color: #5a32a3;
+}
+
+/* Farbe für den Gefahr-Button (Löschen) */
+.card-button--danger {
+    background-color: #c53030;
+}
+.card-button--danger:hover {
+    background-color: #a02020;
+}

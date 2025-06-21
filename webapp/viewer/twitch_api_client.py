@@ -4,6 +4,7 @@ import requests
 import logging
 from django.conf import settings
 from datetime import datetime, timedelta
+import json
 
 logger = logging.getLogger(__name__)
 
@@ -30,7 +31,6 @@ def _fetch_app_access_token():
         response.raise_for_status()
         token_data = response.json()
         APP_ACCESS_TOKEN = token_data['access_token']
-        # Setze die Ablaufzeit etwas früher, um Puffer zu haben (z.B. 1 Minute früher)
         TOKEN_EXPIRATION_TIME = datetime.now() + timedelta(seconds=token_data['expires_in'] - 60)
         logger.info("Successfully fetched new Twitch App Access Token.")
         return True
@@ -52,7 +52,6 @@ def _fetch_app_access_token():
 def get_valid_app_access_token():
     """
     Gibt einen gültigen App Access Token zurück.
-    Fordert einen neuen an, falls keiner vorhanden oder der aktuelle abgelaufen ist.
     """
     if not settings.TWITCH_CLIENT_ID or not settings.TWITCH_CLIENT_SECRET:
         logger.error("Twitch Client ID or Secret not configured in Django settings.")
@@ -102,8 +101,7 @@ def get_user_id_by_login(twitch_login_name):
 
 def get_user_vods(twitch_user_id, max_results=10):
     """
-    Holt die letzten VODs (Typ: "archive", also vergangene Übertragungen)
-    eines Twitch-Nutzers anhand seiner User ID.
+    Holt die letzten VODs eines Twitch-Nutzers.
     """
     token = get_valid_app_access_token()
     if not token:
@@ -116,9 +114,8 @@ def get_user_vods(twitch_user_id, max_results=10):
     params = {
         'user_id': twitch_user_id,
         'type': 'archive',
-        # 'archive' für vergangene Übertragungen, 'upload' für manuelle Uploads, 'highlight' für Highlights
-        'first': max_results,  # Anzahl der Ergebnisse
-        'sort': 'time'  # Sortiert nach Datum (neueste zuerst)
+        'first': max_results,
+        'sort': 'time'
     }
 
     try:
@@ -128,10 +125,7 @@ def get_user_vods(twitch_user_id, max_results=10):
 
         formatted_vods = []
         for video in videos_data:
-            # Thumbnail URL: Ersetze Platzhalter für Größe
             thumbnail_url = video.get('thumbnail_url', '').replace('%{width}', '320').replace('%{height}', '180')
-
-            # Dauer parsen (z.B. "1h2m3s" oder "45m10s")
             duration_str = video.get('duration', '0s')
             total_seconds = 0
             if 'h' in duration_str:
@@ -146,22 +140,23 @@ def get_user_vods(twitch_user_id, max_results=10):
                 parts = duration_str.split('s')
                 total_seconds += int(parts[0])
 
-            # Datum lesbarer formatieren
             try:
-                created_at_dt = datetime.strptime(video.get('created_at'), "%Y-%m-%dT%H:%M:%SZ")
+                created_at_dt = datetime.strptime(video.get('created_at'), "%Y-%m-%dT%H:%M:%SZ").replace(tzinfo=timezone.utc)
                 created_at_formatted = created_at_dt.strftime("%d.%m.%Y, %H:%M Uhr")
             except (ValueError, TypeError):
-                created_at_formatted = video.get('created_at')
+                created_at_dt = django_timezone.now()
 
             formatted_vods.append({
                 'id': video.get('id'),
                 'title': video.get('title'),
                 'url': video.get('url'),
                 'thumbnail_url': thumbnail_url,
-                'duration_seconds': total_seconds,  # Für interne Nutzung/Sortierung
+                'duration_seconds': total_seconds,
                 'duration_formatted': f"{total_seconds // 3600:02d}:{(total_seconds % 3600) // 60:02d}:{total_seconds % 60:02d}",
-                'created_at': created_at_formatted,
+                'created_at': created_at_dt,
+                'created_at_iso': video.get('created_at'),
                 'view_count': video.get('view_count')
+                # Die Zeile für 'game_name' wurde entfernt
             })
         logger.info(f"Successfully fetched {len(formatted_vods)} VODs for user ID {twitch_user_id}.")
         return formatted_vods

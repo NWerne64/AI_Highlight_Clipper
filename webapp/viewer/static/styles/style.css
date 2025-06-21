@@ -1,3 +1,287 @@
+/* Am Anfang der Datei, :root oder body definieren für die Variablen */
+:root {
+  --body-bg: #f3f0ff;
+  --form-bg: white;
+  --form-border-color: #6f42c1;
+  --form-header-brand-color: #6f42c1; /* Für .form_brand und .form_tittle */
+  --input-bg: #fdfdff;
+  --input-border-color: #ccc;
+  --input-focus-border-color: #9f7aea;
+  --input-focus-shadow-color: rgba(159, 122, 234, 0.2);
+  --input-text-color: #333;
+  --placeholder-color: #aaa;
+  --btn-bg: #6f42c1;
+  --btn-text-color: white;
+  --btn-hover-bg: #5a32a3;
+  --label-color: #6f42c1;
+  --label-hover-color: #5a32a3;
+  --site-header-bg: #6f42c1;
+  --site-header-border-color: #6f42c1;
+  --site-header-title-color: white;
+  --error-text-color: red;
+  --canvas-bg: #fbf9ff; /* Für den Hintergrund des Canvas-Effekts in index.html */
+}
+
+/* Dark Mode Stile - werden aktiviert, wenn body die Klasse .dark-mode hat */
+body.dark-mode {
+  --body-bg: #1e1e2f; /* Dunkles Blau-Grau */
+  --form-bg: #2c2c3e;  /* Etwas helleres Dunkel */
+  --form-border-color: #8a5cf5; /* Helleres Lila */
+  --form-header-brand-color: #ab87ff; /* Helleres Lila für Text */
+  --input-bg: #3a3a4f;
+  --input-border-color: #505060;
+  --input-focus-border-color: #ab87ff;
+  --input-focus-shadow-color: rgba(171, 135, 255, 0.3);
+  --input-text-color: #e0e0e0;
+  --placeholder-color: #777;
+  --btn-bg: #8a5cf5;
+  --btn-text-color: #1e1e2f; /* Dunkler Text auf hellem Button */
+  --btn-hover-bg: #703fdd;
+  --label-color: #ab87ff;
+  --label-hover-color: #c0a0ff;
+  --site-header-bg: #2a2a3e;
+  --site-header-border-color: #2a2a3e;
+  --site-header-title-color: #e0e0e0;
+  --error-text-color: #ff6b6b; /* Helleres Rot */
+  --canvas-bg: #1a1a2e; /* Dunklerer Canvas Hintergrund */
+}
+
+* {
+  box-sizing: border-box;
+}
+
+/* === Fixed Header oben === */
+.site_header {
+    width: 100%;
+    background-color: var(--site-header-bg); /* Variable verwenden */
+    border-bottom: 1px solid var(--site-header-border-color); /* Variable verwenden */
+    padding: 10px 30px;
+    position: fixed;
+    top: 0;
+    left: 0;
+    z-index: 1000;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.03);
+}
+
+.header_content {
+    display: flex;
+    align-items: center;
+    justify-content: space-between; /* Damit der Button rechts platziert werden kann */
+    max-width: 1200px;
+    margin: 0 auto;
+}
+
+.header_branding { /* Hilfs-Div für Logo und Titel, falls nötig */
+    display: flex;
+    align-items: center;
+}
+
+.header_logo {
+    height: 36px;
+    width: auto;
+    margin-right: 12px;
+}
+
+.header_title {
+    font-size: 20px;
+    font-weight: 600;
+    color: var(--site-header-title-color); /* Variable verwenden */
+}
+
+/* Dark Mode Toggle Button Styling */
+#darkModeToggle {
+    background-color: var(--btn-text-color); /* Umgekehrte Farben zum Header-Button */
+    color: var(--btn-bg);
+    border: 1px solid var(--btn-bg);
+    padding: 8px 12px;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 14px;
+    transition: background-color 0.2s, color 0.2s;
+}
+
+body.dark-mode #darkModeToggle {
+    background-color: var(--dm-btn-text-color);
+    color: var(--dm-btn-bg);
+    border-color: var(--dm-btn-bg);
+}
+
+
+/* Abstand unten für Login-Box, weil Header fixiert ist */
+.form_page {
+    margin-top: 80px; /* ↑ mehr Platz damit nichts überlappt */
+}
+
+
+body {
+    background: var(--body-bg); /* Variable verwenden */
+    font-family: 'Lato', sans-serif;
+    font-weight: 400;
+    font-size: 16px;
+    line-height: 1.6;
+    color: var(--input-text-color); /* Allgemeine Textfarbe anpassen */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 100vh;
+    transition: background-color 0.3s, color 0.3s; /* Sanfter Übergang */
+}
+
+.form_page {
+    width: 100%;
+    text-align: center;
+}
+
+.form_inner {
+    display: inline-block;
+    padding: 0;
+}
+
+form {
+    width: 400px;
+    padding: 40px;
+    background-color: var(--form-bg); /* Variable verwenden */
+    border-radius: 12px;
+    border: 2px solid var(--form-border-color); /* Variable verwenden */
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.05);
+    transition: box-shadow 0.3s, background-color 0.3s, border-color 0.3s; /* Übergänge hinzufügen */
+    animation: fadeIn 0.3s ease; /* 👈 Animation */
+}
+
+form:hover {
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
+}
+
+/* === Header mit Logo, Marke und Titel === */
+.form_header {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    margin-bottom: 20px;
+}
+
+.form_logo {
+    width: 300px;
+    height: auto;
+    /* Für Dark Mode könnte ein invertierter Filter sinnvoll sein, falls das Logo nicht transparent ist */
+}
+body.dark-mode .form_logo {
+    /* filter: invert(1) hue-rotate(180deg); Beispiel, falls nötig */
+}
+
+
+.form_brand {
+    font-size: 22px;
+    font-weight: 700;
+    color: var(--form-header-brand-color); /* Variable verwenden */
+    margin: 0;
+}
+
+.form_tittle {
+    font-size: 24px;
+    font-weight: 700;
+    color: var(--form-header-brand-color); /* Gleiche Variable wie Brand für Konsistenz */
+    margin: 4px 0 0 0;
+}
+
+/* === Inputs === */
+input {
+    display: block;
+    width: 100%;
+    padding: 12px;
+    margin-bottom: 20px;
+    border: 1px solid var(--input-border-color); /* Variable verwenden */
+    border-radius: 6px;
+    background-color: var(--input-bg); /* Variable verwenden */
+    font-size: 15px;
+    transition: border-color 0.3s, box-shadow 0.3s, background-color 0.3s;
+    color: var(--input-text-color); /* Variable verwenden */
+}
+
+input:focus {
+    outline: none;
+    border-color: var(--input-focus-border-color); /* Variable verwenden */
+    box-shadow: 0 0 0 3px var(--input-focus-shadow-color); /* Variable verwenden */
+    background-color: var(--form-bg); /* Kann gleich wie Formularhintergrund sein oder leicht anders */
+}
+
+::placeholder {
+    color: var(--placeholder-color); /* Variable verwenden */
+    font-style: italic;
+}
+
+/* === Button === */
+.btn_form {
+    background-color: var(--btn-bg); /* Variable verwenden */
+    color: var(--btn-text-color); /* Variable verwenden */
+    padding: 12px 40px;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 16px;
+    font-weight: 500;
+    transition: background-color 0.2s;
+}
+
+.btn_form:hover {
+    background-color: var(--btn-hover-bg); /* Variable verwenden */
+}
+
+/* === Link / Label unter Button === */
+label[for="form-switch"] span { /* Spezifischer, um andere Labels nicht zu beeinflussen */
+    display: block;
+    margin-top: 20px;
+    color: var(--label-color); /* Variable verwenden */
+    font-size: 14px;
+    cursor: pointer;
+    transition: color 0.2s;
+}
+
+label[for="form-switch"]:hover span {
+    text-decoration: underline;
+    color: var(--label-hover-color); /* Variable verwenden */
+}
+
+/* Fehlermeldungen anpassen */
+p[style*="color: red"] { /* Selektiert Fehlermeldungen */
+    color: var(--error-text-color) !important; /* Wichtig, um Inline-Style zu überschreiben */
+}
+div[style*="color: red"] {
+    color: var(--error-text-color) !important;
+}
+
+
+/* === Form Switch Toggle === */
+#form-switch {
+    display: none;
+}
+
+#register-form {
+    display: none;
+}
+
+#form-switch:checked ~ #register-form {
+    display: block;
+    animation: fadeIn 0.3s ease; /* 👈 Animation beim Sichtbarwerden */
+}
+
+#form-switch:checked ~ #login-form {
+    display: none;
+}
+
+/* === Animation Keyframes === */
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+
 * {
   box-sizing: border-box;
 }

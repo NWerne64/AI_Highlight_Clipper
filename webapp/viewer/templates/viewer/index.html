@@ -12,7 +12,8 @@
      body {
        margin: 0;
        overflow: hidden;
-       background: #fbf9ff;
+       /* Hintergrund wird jetzt durch CSS-Variable --canvas-bg gesteuert */
+       /* background: #fbf9ff; */
        font-family: 'Lato', sans-serif;
      }
 
@@ -24,6 +25,8 @@
        height: 100vh;
        z-index: -1;
        pointer-events: none;
+       background-color: var(--canvas-bg); /* Canvas Hintergrund über Variable */
+       transition: background-color 0.3s; /* Übergang für Canvas-Hintergrund */
      }
    </style>
 </head>
@@ -34,16 +37,16 @@
 
 <header class="site_header">
   <div class="header_content">
-    <img src="{% static 'images/logo textless white.png' %}" alt="Stream Clipper Logo" class="header_logo">
-    <span class="header_title">StreamClipper</span>
-  </div>
+    <div class="header_branding"> <img src="{% static 'images/logo textless white.png' %}" alt="Stream Clipper Logo" class="header_logo">
+        <span class="header_title">StreamClipper</span>
+    </div>
+    <button id="darkModeToggle">🌙</button> </div>
 </header>
 
 <div class="form_page">
   <div class="form_inner">
     <input type="checkbox" id="form-switch" {% if registration_errors %}checked{% endif %}>
 
-    <!-- Login-Formular -->
     <form id="login-form" action="{% url 'index' %}" method="post">
       {% csrf_token %}
       <div class="form_header">
@@ -60,7 +63,6 @@
       {% endif %}
     </form>
 
-    <!-- Register-Formular -->
     <form id="register-form" action="{% url 'index' %}" method="post">
       {% csrf_token %}
       <div class="form_header">
@@ -90,95 +92,132 @@
 </div>
 
 <script>
-const canvas = document.getElementById("bg-canvas");
-const ctx = canvas.getContext("2d");
+  const canvas = document.getElementById("bg-canvas");
+  const ctx = canvas.getContext("2d");
+  const darkModeToggle = document.getElementById('darkModeToggle'); // Button holen
 
-function resizeCanvas() {
-  canvas.width = window.innerWidth;
-  canvas.height = window.innerHeight;
-}
-resizeCanvas();
-window.addEventListener("resize", resizeCanvas);
-
-const symbols = ["circle", "triangle", "square"];
-const particles = [];
-const particleCount = 300;
-const hoverRadius = 76; // ~2cm
-
-function randomSymbol() {
-  return symbols[Math.floor(Math.random() * symbols.length)];
-}
-
-function drawSymbol(p) {
-  const { x, y, size, symbol } = p;
-  ctx.beginPath();
-  switch(symbol) {
-    case "circle":
-      ctx.arc(x, y, size, 0, Math.PI * 2);
-      break;
-    case "triangle":
-      ctx.moveTo(x, y - size);
-      ctx.lineTo(x - size, y + size);
-      ctx.lineTo(x + size, y + size);
-      ctx.closePath();
-      break;
-    case "square":
-      ctx.rect(x - size, y - size, size * 2, size * 2);
-      break;
+  function resizeCanvas() {
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
   }
-  ctx.fillStyle = p.color;
-  ctx.fill();
-}
+  resizeCanvas();
+  window.addEventListener("resize", resizeCanvas);
 
-for (let i = 0; i < particleCount; i++) {
-  particles.push({
-    x: Math.random() * canvas.width,
-    y: Math.random() * canvas.height,
-    vx: (Math.random() - 0.5) * 0.5,
-    vy: (Math.random() - 0.5) * 0.5,
-    size: 4 + Math.random() * 3,
-    symbol: randomSymbol(),
-    color: `hsl(${180 + Math.random() * 100}, 100%, 70%)`,
-  });
-}
+  const symbols = ["circle", "triangle", "square"];
+  const particles = [];
+  const particleCount = 300; // Beibehalten, kann bei Bedarf reduziert werden
+  const hoverRadius = 76; // ~2cm
 
-let mouse = { x: -9999, y: -9999 };
+  function randomSymbol() {
+    return symbols[Math.floor(Math.random() * symbols.length)];
+  }
 
-// 👇 Das ist wichtig: document, nicht canvas!
-document.addEventListener("mousemove", e => {
-  mouse.x = e.clientX;
-  mouse.y = e.clientY;
-});
-
-document.addEventListener("mouseleave", () => {
-  mouse.x = -9999;
-  mouse.y = -9999;
-});
-
-function animate() {
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
-  for (let p of particles) {
-    p.x += p.vx;
-    p.y += p.vy;
-
-    if (p.x < 0 || p.x > canvas.width) p.vx *= -1;
-    if (p.y < 0 || p.y > canvas.height) p.vy *= -1;
-
-    let dx = p.x - mouse.x;
-    let dy = p.y - mouse.y;
-    let dist = Math.sqrt(dx * dx + dy * dy);
-    if (dist < hoverRadius) {
-      let angle = Math.atan2(dy, dx);
-      p.x += Math.cos(angle) * 2;
-      p.y += Math.sin(angle) * 2;
+  function drawSymbol(p) {
+    const { x, y, size, symbol } = p;
+    ctx.beginPath();
+    switch(symbol) {
+      case "circle":
+        ctx.arc(x, y, size, 0, Math.PI * 2);
+        break;
+      case "triangle":
+        ctx.moveTo(x, y - size);
+        ctx.lineTo(x - size, y + size);
+        ctx.lineTo(x + size, y + size);
+        ctx.closePath();
+        break;
+      case "square":
+        ctx.rect(x - size, y - size, size * 2, size * 2);
+        break;
     }
-
-    drawSymbol(p);
+    ctx.fillStyle = p.color; // Partikelfarben bleiben erstmal so
+    ctx.fill();
   }
-  requestAnimationFrame(animate);
-}
 
-animate();
+  for (let i = 0; i < particleCount; i++) {
+    particles.push({
+      x: Math.random() * canvas.width,
+      y: Math.random() * canvas.height,
+      vx: (Math.random() - 0.5) * 0.5,
+      vy: (Math.random() - 0.5) * 0.5,
+      size: 4 + Math.random() * 3,
+      symbol: randomSymbol(),
+      // HSL Farben: (Farbton, Sättigung, Helligkeit)
+      // Für Dark Mode könnten hellere Partikel besser aussehen
+      // color: `hsl(${180 + Math.random() * 100}, 100%, document.body.classList.contains('dark-mode') ? 80 : 70)%` // Beispiel Anpassung
+      color: `hsl(${180 + Math.random() * 100}, 100%, 70%)` // Vorerst belassen
+    });
+  }
+
+  let mouse = { x: -9999, y: -9999 };
+
+  document.addEventListener("mousemove", e => {
+    mouse.x = e.clientX;
+    mouse.y = e.clientY;
+  });
+
+  document.addEventListener("mouseleave", () => {
+    mouse.x = -9999;
+    mouse.y = -9999;
+  });
+
+  function animate() {
+    // Hintergrund des Canvas wird jetzt durch CSS (var(--canvas-bg)) gesteuert, daher hier kein clearRect mehr nötig,
+    // wenn der Canvas selbst einen Hintergrund hat. Wenn der Canvas transparent sein soll und der body den Hintergrund
+    // bereitstellt, dann ist clearRect weiterhin nötig.
+    // Für den Fall, dass der Canvas eine eigene Hintergrundfarbe hat (wie jetzt über CSS-Variable):
+    // ctx.clearRect(0, 0, canvas.width, canvas.height); // Ist dann nicht mehr zwingend
+
+    // Wenn der Canvas transparent sein soll und der body den Hintergrund setzt:
+    ctx.clearRect(0, 0, canvas.width, canvas.height); // Diese Zeile beibehalten
+
+    for (let p of particles) {
+      p.x += p.vx;
+      p.y += p.vy;
+
+      if (p.x < 0 || p.x > canvas.width) p.vx *= -1;
+      if (p.y < 0 || p.y > canvas.height) p.vy *= -1;
+
+      let dx = p.x - mouse.x;
+      let dy = p.y - mouse.y;
+      let dist = Math.sqrt(dx * dx + dy * dy);
+      if (dist < hoverRadius) {
+        let angle = Math.atan2(dy, dx);
+        p.x += Math.cos(angle) * 2;
+        p.y += Math.sin(angle) * 2;
+      }
+      drawSymbol(p);
+    }
+    requestAnimationFrame(animate);
+  }
+
+  // Dark Mode Toggle Logik
+  const currentTheme = localStorage.getItem('theme');
+  if (currentTheme === 'dark') {
+    document.body.classList.add('dark-mode');
+    darkModeToggle.textContent = '☀️'; // Sonne für Light Mode
+  } else {
+    darkModeToggle.textContent = '🌙'; // Mond für Dark Mode
+  }
+
+  darkModeToggle.addEventListener('click', function() {
+    document.body.classList.toggle('dark-mode');
+    let theme = 'light';
+    if (document.body.classList.contains('dark-mode')) {
+      theme = 'dark';
+      darkModeToggle.textContent = '☀️';
+    } else {
+      darkModeToggle.textContent = '🌙';
+    }
+    localStorage.setItem('theme', theme);
+
+    // Optional: Partikelfarben neu setzen, falls sie vom Theme abhängen sollen
+    // particles.forEach(p => {
+    //  p.color = `hsl(${180 + Math.random() * 100}, 100%, document.body.classList.contains('dark-mode') ? 85 : 70%)`;
+    // });
+  });
+
+  // Starte die Canvas Animation
+  animate();
 </script>
 
 </body>
