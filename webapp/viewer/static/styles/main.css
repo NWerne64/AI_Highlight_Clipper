@@ -375,6 +375,7 @@ main.main {
     max-width: 1200px; /* optional: max. Breite für große Bildschirme */
 }
 
+
 .form_selector {
   text-align: center;
   margin-bottom: 40px;
@@ -912,7 +913,6 @@ body.dark-mode #themeToggle {
     display: inline-block;
     background-color: #6f42c1;
     color: white;
-    padding: 10px 18px;
     border-radius: 6px;
     font-size: 14px;
     font-weight: 600;
@@ -1033,6 +1033,65 @@ body.dark-mode #twitch-import-form label {
   background: #1e1e2f;
 }
 
+body.dark-mode .vod-entry .info-block h4,
+body.dark-mode .vod-entry .info-block p {
+    color: #ffffff;
+}
+
+
+.messages {
+  max-width: 800px;
+  margin: 0 auto 30px auto;
+  padding: 0;
+  list-style: none;
+}
+
+.messages li {
+  padding: 15px 20px;
+  border-radius: 8px;
+  margin-bottom: 10px;
+  font-weight: 500;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  position: relative;
+  animation: fadeInSlide 0.4s ease-out;
+}
+
+.messages li.success {
+  background-color: #d1f8d7;
+  border-left: 5px solid #28a745;
+  color: #155724;
+}
+
+.messages li.error {
+  background-color: #f8d7da;
+  border-left: 5px solid #dc3545;
+  color: #721c24;
+}
+
+.messages li.warning {
+  background-color: #fff3cd;
+  border-left: 5px solid #ffc107;
+  color: #856404;
+}
+
+.messages li.info {
+  background-color: #d1ecf1;
+  border-left: 5px solid #17a2b8;
+  color: #0c5460;
+}
+
+@keyframes fadeInSlide {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+
 
 /* Info-Button Standard-Styling (falls noch nicht im CSS, aus dem <style> kopieren) */
 .info-button {
@@ -1094,15 +1153,14 @@ input[type="file"],
 }
 /* Der Container für das Video (das schwarze Rechteck) */
 .vod-entry .card-video-container {
-    width: 100%;
-    aspect-ratio: 16 / 9;
-    background-color: #1c1c1c; /* Dunkler Hintergrund für den Ladezustand */
+    width: auto;
+    height: auto;
     overflow: hidden;
     position: relative;
-    display: flex; /* Wichtig für die Zentrierung */
-    justify-content: center;
-    align-items: center;
+    display: block;
+    aspect-ratio: 16/9;
 }
+
 
 /* Das <video>-Element selbst */
 .vod-entry .card-video-container .card-video {

@@ -158,7 +158,14 @@
       </div>
 
 
-      {% if messages %}<ul class="messages">{% for message in messages %}<li{% if message.tags %} class="{{ message.tags }}"{% endif %}>{{ message }}</li>{% endfor %}</ul>{% endif %}
+    {% if messages %}
+      <ul class="messages">
+        {% for message in messages %}
+          <li class="{{ message.tags }}">{{ message }}</li>
+        {% endfor %}
+      </ul>
+    {% endif %}
+
 
       <form id="upload-form" class="action_form hidden" method="post" enctype="multipart/form-data" action="{% url 'add_stream' %}">
         <h2>Video hochladen</h2>
@@ -230,18 +237,21 @@
             {% for stream in stream_data %}
                 <div class="vod-entry">
                     <div class="card-video-container">
-                        <a href="{% url 'video_player' stream_id=stream.id %}" style="display: block; width: 100%; height: 100%;">
+                        <a href="{% url 'video_player' stream_id=stream.id %}" style="display: block; width: auto; height: auto;">
                             {% if stream.video_file and stream.video_file.url %}
-                                <video preload="metadata" class="card-video">
-                                    <source src="{{ stream.video_file.url }}#t=1" type="video/mp4">
-                                </video>
+                                    <video
+                                      playsinline
+                                      preload="metadata"
+                                      style="width: 100%; height:100%; object-fit: cover; display: block;"
+                                    >
+                                      <source src="{{ stream.video_url }}#t=0,0010" type="video/mp4">
+                                    </video>
                             {% else %}
                                 <div style="width: 100%; height: 100%; display: flex; align-items: center; justify-content: center;">
                                     <span style="color: #888; font-size: 60px; font-weight: bold;">?</span>
                                 </div>
                             {% endif %}
                         </a>
-                         <img src="{% static 'images/play.png' %}" alt="Play" style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 50px; height: 50px; opacity: 0.7; pointer-events: none;">
                     </div>
 
                     <div class="info-block">
@@ -324,6 +334,14 @@
         toggle.textContent = isDark ? '☀️' : '🌙';
         localStorage.setItem('theme', isDark ? 'dark' : 'light');
       });
+
+      setTimeout(() => {
+        document.querySelectorAll('.messages li').forEach(el => {
+          el.style.transition = 'opacity 0.6s ease-out';
+          el.style.opacity = '0';
+          setTimeout(() => el.remove(), 600); // Entferne nach Fade-Out
+        });
+      }, 20000); // Warte 5 Sekunden
   </script>
 
 </div>

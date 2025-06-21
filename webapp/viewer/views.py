@@ -188,7 +188,7 @@ def add_stream(request):
                     new_stream.save(update_fields=['duration_seconds'])
 
                 messages.success(request,
-                                 f"Video '{new_stream.stream_name}' erfolgreich hochgeladen. Highlights können jetzt generiert werden.")
+                                 f"Video erfolgreich hochgeladen.")
             except Exception as e:
                 print(
                     f"❌ Fehler beim Verschieben der Videodatei von '{temp_video_path}' nach '{absolute_target_path}': {e}")
