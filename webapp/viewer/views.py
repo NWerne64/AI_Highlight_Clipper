@@ -670,11 +670,13 @@ def stop_recording_view(request, stream_id):
 @require_POST
 def process_recorded_video_view(request, stream_id):
     """
-    Führt den FFmpeg Repack für eine aufgenommene Datei aus, um sie abspielbar zu machen.
+    Führt den FFmpeg Repack für eine aufgenommene Datei aus, um sie abspielbar zu machen,
+    UND ermittelt anschließend die Videodauer mit ffprobe.
     """
     stream = get_object_or_404(Stream, id=stream_id, user_id=request.user)
     log_prefix = f"[Process Video View Stream {stream_id}] "
 
+    # --- Dieser Teil bleibt unverändert ---
     if not stream.video_file or not stream.video_file.name:
         messages.error(request, "Keine Videodatei für diesen Stream gefunden.")
         return redirect('index')
@@ -697,19 +699,43 @@ def process_recorded_video_view(request, stream_id):
 
     print(f"{log_prefix}Führe FFmpeg Repack aus...")
     try:
+        # Führe den Repack-Befehl aus
         subprocess.run(repack_cmd, check=True, capture_output=True, text=True, encoding='utf-8')
+
         if os.path.exists(repacked_video_path_temp):
             shutil.move(repacked_video_path_temp, video_path)
             stream.analysis_status = 'DOWNLOAD_COMPLETE'
-            stream.save()
-            messages.success(request, "Video erfolgreich verarbeitet und ist jetzt abspielbar.")
             print(f"{log_prefix}Repack erfolgreich.")
+
+            # --- ANFANG: NEUER CODE ZUR DAUER-ERMITTLUNG ---
+            try:
+                # ffprobe ist Teil von ffmpeg, der Pfad sollte also stimmen
+                ffprobe_path = getattr(settings, 'FFPROBE_PATH', 'ffprobe')
+                result = subprocess.run([
+                    ffprobe_path, '-v', 'error',
+                    '-show_entries', 'format=duration',
+                    '-of', 'default=noprint_wrappers=1:nokey=1',
+                    video_path
+                ], stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, check=True)
+
+                duration = float(result.stdout)
+                stream.duration_seconds = int(duration)
+                print(f"{log_prefix}Videodauer von {stream.duration_seconds}s erfolgreich ermittelt.")
+            except Exception as e:
+                print(f"{log_prefix}⚠️ Konnte Videodauer nicht auslesen: {e}")
+                stream.duration_seconds = 0  # Fallback auf 0 setzen
+            # --- ENDE: NEUER CODE ZUR DAUER-ERMITTLUNG ---
+
+            # Speichere alle Änderungen (Status und Dauer) auf einmal
+            stream.save(update_fields=['analysis_status', 'duration_seconds'])
+            messages.success(request, "Video erfolgreich verarbeitet und Dauer ermittelt.")
+
         else:
             raise FileNotFoundError("Temporäre Repack-Datei wurde nicht erstellt.")
 
     except Exception as e:
         messages.error(request, f"Fehler bei der Videoverarbeitung: {e}")
-        print(f"{log_prefix}FEHLER beim Repack: {e}")
+        print(f"{log_prefix}FEHLER beim Repack oder der Dauer-Ermittlung: {e}")
         stream.analysis_status = 'ERROR'
         stream.save()
 

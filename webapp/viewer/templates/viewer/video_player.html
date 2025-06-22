@@ -85,20 +85,20 @@
             {% endif %}
 
 
-            <div style="margin-top: 20px;">
-                <form method="post" action="{% url 'generate_highlights' stream_id=stream.id %}" style="display: inline;" onsubmit="showGeneratingStatus();">
+            <div class="video-actions-container">
+                <form method="post" action="{% url 'generate_highlights' stream_id=stream.id %}" onsubmit="showGeneratingStatus();">
                     {% csrf_token %}
                     <button type="submit" class="generator-button">Highlights generieren</button>
                 </form>
 
-                <a href="{% url 'generator' stream_id=stream.id %}" class="generator-button" style="margin-left: 15px;">
-                    Highlights anzeigen
-                </a>
+                <form method="get" action="{% url 'generator' stream_id=stream.id %}">
+                    <button type="submit" class="generator-button">Highlights anzeigen</button>
+                </form>
             </div>
         </div>
 
-        <div style="text-align: center; margin-top: 30px;">
-            <a href="{% url 'index' %}" class="generator-button">Zurück zur Übersicht</a>
+        <div class="video-actions-container">
+            <a href="{% url 'index' %}" class="zuruck-button">Zurück zur Übersicht</a>
         </div>
 
     </div>

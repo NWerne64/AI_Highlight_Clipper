@@ -754,7 +754,6 @@ main.main {
     background-color: #5a32a3;
 }
 
-/* Rück-Link – wie Button */
 a[href*="index"] {
     display: inline-block;
     background-color: #6f42c1;
@@ -771,7 +770,6 @@ a[href*="index"] {
 a[href*="index"]:hover {
     background-color: #5a32a3;
 }
-
 
 /* === Highlight Generator Box === */
 .stats-box {
@@ -1260,4 +1258,84 @@ input[type="file"],
 }
 .card-button--stop:hover {
     background-color: #e07b00; /* Etwas dunkler beim Hover */
+}
+.card-button--warning {
+    background-color: #f39c12; /* Ein sattes, warmes Orange */
+    color: #000000; /* Schwarzer Text für maximalen Kontrast */
+    border: none;
+    padding: 10px 15px;
+    border-radius: 5px;
+    cursor: pointer;
+    text-decoration: none;
+    font-size: 14px;
+    font-weight: bold;
+    transition: background-color 0.2s ease-in-out;
+    display: inline-block;
+    text-align: center;
+}
+
+.card-button--warning:hover {
+    background-color: #e67e22; /* Ein etwas dunkleres Orange beim Hovern */
+}
+/* Der Container, der die Buttons umschließt */
+.video-actions-container {
+    display: flex;
+    justify-content: center;
+    gap: 15px;         /* Abstand zwischen den Formular-Elementen */
+    margin-top: 30px;
+    align-items: stretch; /* Stellt sicher, dass die Flex-Items (die Forms) gleich hoch sind */
+}
+
+/* Wir stylen jetzt das Formular selbst als Flex-Item */
+.video-actions-container form {
+    display: flex; /* Lässt den Button innerhalb des Formulars die volle Höhe einnehmen */
+}
+
+/* Das Styling für den Button bleibt weitgehend gleich, aber wir fügen height: 100% hinzu */
+.generator-button {
+    /* Optik */
+    background-color: #6f42c1;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: background-color 0.2s ease-in-out;
+
+    /* Text & Schrift */
+    font-family: 'Lato', sans-serif;
+    font-size: 15px;
+    font-weight: 600;
+    text-align: center;
+
+    /* Größe & Layout */
+    padding: 12px 24px;
+    min-width: 220px;
+    box-sizing: border-box;
+    width: 100%;       /* Button füllt das Formular in der Breite */
+    height: 100%;      /* WICHTIG: Button füllt das Formular in der Höhe */
+}
+
+.generator-button:hover {
+    background-color: #5a32a3;
+}
+.zuruck-button {
+    /* Optik */
+    background-color: #6f42c1;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: background-color 0.2s ease-in-out;
+
+    /* Text & Schrift */
+    font-family: 'Lato', sans-serif;
+    font-size: 15px;
+    font-weight: 600;
+    text-align: center;
+
+    /* Größe & Layout */
+    padding: 12px 24px;
+    min-width: 220px;
+    box-sizing: border-box;
+    height: 100%;      /* WICHTIG: Button füllt das Formular in der Höhe */
 }
