@@ -57,17 +57,33 @@
                 {% endif %}
             {% endif %}
 
-            <div id="status-message"></div>
+            <div id="status-message" class="status-box" style="display: none;">
+                <img src="{% static 'images/loading.gif' %}" alt="Lädt..." class="loading-gif">
+                <span class="status-text">Highlights werden generiert... Bitte bleib auf der Seite.</span>
+            </div>
+
 
             {% if messages %}
-                <div id="highlight-status">
-                    {% for message in messages %}
-                        <p style="color: {% if message.tags == 'error' %}red{% else %}green{% endif %};">
-                            {{ message }}
-                        </p>
-                    {% endfor %}
+                <div class="messages-container">
+                    <ul class="messages">
+                        {% for message in messages %}
+                            <li class="{{ message.tags }}">
+                                {% if message.tags == 'success' %}
+                                    ✅
+                                {% elif message.tags == 'error' %}
+                                    ❌
+                                {% elif message.tags == 'warning' %}
+                                    ⚠️
+                                {% elif message.tags == 'info' %}
+                                    ℹ️
+                                {% endif %}
+                                {{ message }}
+                            </li>
+                        {% endfor %}
+                    </ul>
                 </div>
             {% endif %}
+
 
             <div style="margin-top: 20px;">
                 <form method="post" action="{% url 'generate_highlights' stream_id=stream.id %}" style="display: inline;" onsubmit="showGeneratingStatus();">
@@ -100,7 +116,7 @@
 function showGeneratingStatus() {
     const el = document.getElementById("status-message");
     if (el) {
-        el.innerText = "🎬 Highlights werden generiert... Bitte bleib auf der Seite.";
+        el.style.display = "flex";
     }
 }
 </script>

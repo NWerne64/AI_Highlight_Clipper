@@ -1080,6 +1080,38 @@ body.dark-mode .vod-entry .info-block p {
   color: #0c5460;
 }
 
+/* Ladehinweis mit GIF */
+.status-box {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    background-color: #fff3cd;
+    border: 1px solid #ffc107;
+    padding: 14px 18px;
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    color: #856404;
+    font-weight: 500;
+    font-size: 15px;
+    margin-top: 20px;
+    margin-bottom: 20px;
+    text-align: center;
+}
+
+.status-box .loading-gif {
+    width: 60px;
+    height: auto;
+    rotate: 90deg;
+
+}
+body.dark-mode .status-box {
+    background-color: #3a3a1a;
+    border-color: #d9a300;
+    color: #ffda6a;
+}
+
+
 @keyframes fadeInSlide {
   from {
     opacity: 0;
