@@ -264,21 +264,25 @@
 
                     <div class="card-button-container">
                         {% if stream.analysis_status == 'RECORDING' %}
-                            {# Button zum Stoppen der Aufnahme #}
+                            {# 1. Button, wenn die Aufnahme läuft #}
                             <form action="{% url 'stop_recording' stream_id=stream.id %}" method="post" style="margin:0;">
                                 {% csrf_token %}
                                 <button type="submit" class="card-button card-button--stop">Aufnahme Stoppen 🔴</button>
                             </form>
 
-                        {% elif stream.analysis_status == 'PENDING' %}
-                            {# NEU: Button zum Verarbeiten des fertigen Videos #}
+                        {% elif stream.analysis_status == 'PENDING' or stream.analysis_status == 'STOPPING' %}
+                            {# 2. Button, wenn die Aufnahme beendet ist und verarbeitet werden muss #}
                             <form action="{% url 'process_video' stream_id=stream.id %}" method="post" style="margin:0;">
                                 {% csrf_token %}
                                 <button type="submit" class="card-button card-button--warning">Video verarbeiten ⚙️</button>
                             </form>
+
+                        {% elif stream.analysis_status == 'PROCESSING' %}
+                            {# 3. Info, wenn die Verarbeitung läuft #}
+                            <div class="status-processing">Wird verarbeitet...</div>
                         
                         {% else %}
-                            {# Standard-Buttons für fertige/fehlerhafte Streams #}
+                            {# 4. Standard-Buttons für fertige/fehlerhafte Streams #}
                             <a href="{% url 'video_player' stream_id=stream.id %}" class="card-button card-button--primary">
                                 Highlights & Details
                             </a>

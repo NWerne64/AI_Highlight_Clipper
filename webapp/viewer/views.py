@@ -11,6 +11,7 @@ from django.views.decorators.http import require_POST  # require_POST für gener
 from django.conf import settings
 from django.core.exceptions import FieldError
 from django.core.files.base import ContentFile
+from django.db import transaction
 
 from datetime import datetime, timedelta  # timedelta für ChatAnalyzerFromFile wichtig
 import cv2  # Für Videolänge in generate_highlights_view
@@ -627,50 +628,37 @@ def record_stream_view(request):
 # --- TWITCH AUFNAHME STOPPEN ---
 @login_required
 def stop_recording_view(request, stream_id):
-    """
-    Stoppt eine laufende Aufnahme, indem eine Signal-Datei im korrekten
-    Stream-Verzeichnis erstellt wird.
-    """
+    from django.db import transaction  # Import sicherstellen
     stream = get_object_or_404(Stream, id=stream_id, user_id=request.user)
 
     if stream.analysis_status != 'RECORDING':
-        messages.warning(request, f"Die Aufnahme von '{stream.twitch_channel or stream.stream_link}' läuft nicht und kann daher nicht gestoppt werden.")
+        messages.warning(request, f"Die Aufnahme von '{stream.stream_link}' läuft nicht mehr.")
         return redirect('index')
 
-    # --- KORREKTUR: Pfad dynamisch ermitteln ---
     if not stream.video_file or not stream.video_file.name:
-        messages.error(request, "Fehler: Der Pfad zur Videodatei ist nicht im Stream-Objekt gespeichert. Stoppen nicht möglich.")
+        messages.error(request, "Fehler: Videodateipfad nicht gefunden.")
         return redirect('index')
 
     try:
-        # Leite den Pfad vom gespeicherten video_file ab
         relative_video_path = stream.video_file.name
-        relative_stream_dir = os.path.dirname(relative_video_path)
-        absolute_stream_dir = os.path.join(settings.MEDIA_ROOT, relative_stream_dir)
+        absolute_stream_dir = os.path.join(settings.MEDIA_ROOT, os.path.dirname(relative_video_path))
 
-        # Stelle sicher, dass das Verzeichnis existiert
         if not os.path.isdir(absolute_stream_dir):
-            messages.error(request, f"Fehler: Das Aufnahmeverzeichnis '{absolute_stream_dir}' existiert nicht.")
+            messages.error(request, f"Fehler: Aufnahmeverzeichnis nicht gefunden.")
             return redirect('index')
 
-        # Erstelle die leere Signal-Datei am korrekten Ort
         stop_file_path = os.path.join(absolute_stream_dir, 'stop_recording.flag')
         with open(stop_file_path, 'w') as f:
             pass
         print(f"INFO: Stopp-Signal-Datei erstellt unter: {stop_file_path}")
 
-        # Atomare Transaktion für das DB-Update
         with transaction.atomic():
             stream_to_update = Stream.objects.select_for_update().get(id=stream_id)
             if stream_to_update.analysis_status == 'RECORDING':
-                stream_to_update.analysis_status = 'STOPPING'
+                stream_to_update.analysis_status = 'STOPPING'  # Status für sofortiges UI-Update
                 stream_to_update.recorder_pid = None
                 stream_to_update.save(update_fields=['analysis_status', 'recorder_pid'])
-                messages.success(request, f"Stopp-Signal für '{stream.twitch_channel or stream.stream_link}' gesendet. Die Aufnahme wird beendet...")
-            else:
-                messages.warning(request, f"Die Aufnahme von '{stream.twitch_channel or stream.stream_link}' wurde bereits von einem anderen Prozess beendet.")
-                if os.path.exists(stop_file_path):
-                    os.remove(stop_file_path)
+                messages.success(request, f"Stopp-Signal für '{stream.stream_link}' gesendet...")
 
     except Exception as e:
         messages.error(request, f"Ein unerwarteter Fehler ist aufgetreten: {e}")
