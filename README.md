@@ -15,7 +15,7 @@ You need to do the following to use the app:
 2. Using the `python manage.py makemigrations`
 3. Using the `python manage.py migrate`
 4. Set up config for the twitch integration, for this open the file `.env` and enter the following data
-![](images/twitch config.png)
+![](/images/twitch_config.png)
 5. Install mendatory PANNs data: "Cnn14_mAP=0.431", through this [link](https://huggingface.co/thelou1s/panns-inference/blob/main/Cnn14_mAP%3D0.431.pth) *(warning: 327mb)*
 6. Move the "Cnn14_mAP=0.431" to `panns_data`
 7. Now we can launch the web application. To launch the web application in the root directory of the repository, enter the command:`python manage.py runserver`
@@ -27,7 +27,7 @@ When navigating to the public IP address of the web application, you will see th
 
 When you are logged in, you can choose between 3 options:
 
-![](images/three options.png)
+![](/images/three_options.png)
 
 * "VOD hochladen" (en="upload VOD") enables you to upload a video file from your PC directly. 
   * *Only sound will get analysed!*
@@ -39,14 +39,14 @@ When you are logged in, you can choose between 3 options:
 
 If you upload/ download/ import/ record a stream, it will appear just below:
 
-![](images/existing streams.png)
+![](/images/existing_streams.png)
 
 If you choose to actually generate highlights you have to click on "highlights & details", where you will end up in the video player site:
 
-![](images/video player.png)
+![](/images/video_player.png)
 
 Now you can click "Highlights generieren" (en="generate highlight") and generate your first highlights after a few seconds:
 
-![](images/generated highlights.png)
+![](/images/generated_highlights.png)
 
 You can also read about everything important with the info page, the "?" button on the right corner of the main page!
