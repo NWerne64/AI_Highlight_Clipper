@@ -384,21 +384,89 @@ def generate_highlights_view(request, stream_id):
         df_final_features = df_merged
 
         # --- 4. Highlight Score Berechnung ---
+        # --- Neuer Highlight-Score mit besserer Gewichtung ---
         df_final_features['highlight_score'] = (
-                df_final_features['sound_loudness'].fillna(0) * 1.5 +
-                df_final_features.get('Laughter', pd.Series(0, index=df_final_features.index)).fillna(0) * 3 +
-                df_final_features.get('Gunshot', pd.Series(0, index=df_final_features.index)).fillna(0) * 4 +
-                df_final_features.get('Explosion', pd.Series(0, index=df_final_features.index)).fillna(0) * 2 +
-                df_final_features.get('Scream', pd.Series(0, index=df_final_features.index)).fillna(0) * 2 +
-                df_final_features.get('Applause', pd.Series(0, index=df_final_features.index)).fillna(0) * 1.5 +
-                df_final_features.get('Cheering', pd.Series(0, index=df_final_features.index)).fillna(0) * 1.5 +
-                df_final_features['message_counts'].fillna(0) * 0.05 +
-                df_final_features['positive_message_count'].fillna(0) * 0.2 -
-                df_final_features['negative_message_count'].fillna(0) * 0.1
+                df_final_features['Laughter'].fillna(0) * 4.0 +
+                df_final_features['Cheering'].fillna(0) * 3.5 +
+                df_final_features['Gunshot'].fillna(0) * 4.0 +
+                df_final_features['Explosion'].fillna(0) * 3.5 +
+                df_final_features['Scream'].fillna(0) * 2.0 +
+                df_final_features['Applause'].fillna(0) * 1.5 +
+                df_final_features['sound_loudness'].fillna(0) * 2 +
+                df_final_features['message_counts'].fillna(0) * 0.1 +
+                df_final_features['positive_message_count'].fillna(0) * 0.3 -
+                df_final_features['negative_message_count'].fillna(0) * 0.2
         )
 
-        top_clips_num = getattr(settings, 'TOP_N_HIGHLIGHTS', 10)
-        top_clips = df_final_features.sort_values(by='highlight_score', ascending=False).head(top_clips_num)
+        # --- Erzeuge Score-Zeitkarte (1s-Auflösung) ---
+        highlight_map = []
+        for _, row in df_final_features.iterrows():
+            start = int(row['time_offset'])
+            end = int(row['end_time_sound_offset'])
+            for sec in range(start, end):
+                highlight_map.append({
+                    'second': sec,
+                    'score': row['highlight_score'],
+                })
+
+        highlight_df = pd.DataFrame(highlight_map)
+
+        # --- Glätten und adaptive Schwelle ---
+        highlight_df['smoothed'] = highlight_df['score'].rolling(window=5, min_periods=1, center=True).mean()
+
+        # Dynamisches Quantil basierend auf Streamlänge → längere Streams = strenger
+        stream_hours = max(1, video_total_duration_seconds / 3600.0)
+        adaptive_quantile = min(0.92, 0.80 + 0.02 * stream_hours)  # z. B. 0.84 bei 2h
+
+        threshold = highlight_df['smoothed'].quantile(adaptive_quantile)
+
+        highlight_df['is_highlight'] = highlight_df['smoothed'] > threshold
+
+        print(f"{log_prefix}Adaptive Schwelle gesetzt: {threshold:.3f} (Quantil: {adaptive_quantile:.2f})")
+
+        # --- Gruppiere zusammenhängende Sekunden ---
+        highlight_df['group'] = (highlight_df['is_highlight'] != highlight_df['is_highlight'].shift()).cumsum()
+        highlight_ranges = []
+        for _, group_df in highlight_df.groupby('group'):
+            if not group_df['is_highlight'].iloc[0]:
+                continue
+
+            start_sec = max(0, group_df['second'].min() - 2)  # +2s Kontext vor dem Highlight
+            end_sec = group_df['second'].max() + 3  # +3s Nachlauf
+            if (end_sec - start_sec) >= 5:
+                highlight_ranges.append((start_sec, end_sec))
+
+        # --- Entferne zu nahe Highlights (Duplikate vermeiden) ---
+        filtered_ranges = []
+        last_end = -999
+        for start, end in highlight_ranges:
+            if start > last_end + 5:
+                filtered_ranges.append((start, end))
+                last_end = end
+
+        # --- Werte pro Zeitfenster berechnen ---
+        top_clips = []
+        for start_sec, end_sec in filtered_ranges:
+            feature_segment = df_final_features[
+                (df_final_features['time_offset'] < end_sec) & (df_final_features['end_time_sound_offset'] > start_sec)
+                ]
+            if feature_segment.empty:
+                continue
+
+            combined_row = {
+                'time_offset': start_sec,
+                'end_time_sound_offset': end_sec,
+                'highlight_score': feature_segment['highlight_score'].sum()
+            }
+
+            for col in ['sound_loudness', 'message_counts', 'positive_message_count',
+                        'negative_message_count'] + labels_list:
+                if col in feature_segment.columns:
+                    combined_row[col] = feature_segment[col].mean()
+
+            top_clips.append(combined_row)
+
+        top_clips = pd.DataFrame(top_clips)
 
         # --- 5. Gründe berechnen und Clips extrahieren ---
         label_de = {
